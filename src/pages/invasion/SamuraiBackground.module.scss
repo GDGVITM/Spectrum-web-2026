@@ -1,0 +1,107 @@
+@use "../../assets/global.scss" as *;
+
+.samuraiBgContainer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  z-index: 0; // Fixed at base level
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.mainBackground {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 120%; // Extra height for parallax
+  background-image: url("/images/invasion/samurai_bg_v2.png");
+  background-size: cover;
+  background-position: center;
+  opacity: 0.9; // High opacity for clarity
+  z-index: 0;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  // Stronger gradient for better text legibility
+  background: linear-gradient(to bottom, 
+    rgba(0, 0, 0, 0.5) 0%, 
+    rgba(0, 0, 0, 0.3) 50%, 
+    rgba(0, 0, 0, 0.7) 100%
+  );
+  // Add blur to make background less distracting for text
+  backdrop-filter: blur(2px); 
+  z-index: 1;
+}
+
+
+.petalContainer {
+  position: absolute;
+  inset: 0;
+  z-index: 10; // Bring particles in front of the content for better visibility
+}
+
+.petal {
+  position: absolute;
+  top: -100px;
+  left: -100px;
+  width: 25px; // Enlarged further
+  height: 25px;
+  background: #ff1a1a; // Intense red
+  border-radius: 50% 0 50% 50%;
+  opacity: 0; // Initial hidden
+  filter: drop-shadow(0 0 8px rgba(255, 0, 0, 0.6));
+}
+
+.ember {
+  position: absolute;
+  top: -100px;
+  left: -100px;
+  width: 12px;
+  height: 12px;
+  // Complex multi-stop gradient for realistic core
+  background: radial-gradient(circle at 30% 30%, #fff 0%, #ffeb3b 20%, #ff9800 50%, #f44336 100%);
+  border-radius: 40% 60% 50% 70%; // Irregular shape
+  opacity: 0;
+  box-shadow: 
+    0 0 15px #ff5722, 
+    0 0 30px rgba(255, 87, 34, 0.8),
+    inset 0 0 5px rgba(255, 255, 255, 0.5); // Internal glow
+  filter: blur(0.5px);
+}
+
+.ash {
+  position: absolute;
+  top: -100px;
+  left: -100px;
+  width: 20px; 
+  height: 20px; // Fixed syntax error
+  // Reddish-gray textured gradient
+  background: radial-gradient(circle at center, #ff4545 0%, #eee 40%, #ccc 100%);
+  border-radius: 20% 40% 30% 50%;
+  opacity: 0;
+  // Stronger rim light with a hint of red
+  box-shadow: 
+    0 0 4px rgba(255, 100, 100, 0.8),
+    inset -1px -1px 3px rgba(0, 0, 0, 0.4);
+  filter: drop-shadow(0 0 3px rgba(255, 50, 50, 0.4));
+}
+
+.smoke {
+  position: absolute;
+  inset: 0;
+  background: url("https://www.transparenttextures.com/patterns/stardust.png"); // Subtle grain/smoke texture
+  opacity: 0.08; // Further reduced
+  mix-blend-mode: screen;
+  animation: drift 60s linear infinite;
+  z-index: 1;
+}
+
+@keyframes drift {
+  from { background-position: 0 0; }
+  to { background-position: 1000px 1000px; }
+}

@@ -42,6 +42,7 @@ interface EventLayoutProps {
   disqualification?: string[];
   registrationLink?: string;
   registrationLabel?: string;
+  transparentBackground?: boolean;
   children?: ReactNode;
 }
 
@@ -62,6 +63,7 @@ export default function EventLayout({
   disqualification,
   registrationLink,
   registrationLabel = "Register Now",
+  transparentBackground = false,
   children,
 }: EventLayoutProps) {
   const sectionsRef = useRef<(HTMLElement | null)[]>([]);
@@ -94,7 +96,7 @@ export default function EventLayout({
   let sectionIdx = 0;
 
   return (
-    <div className={styles.container}>
+    <div className={`${styles.container} ${transparentBackground ? styles.transparent : ""}`}>
       <BackButton className={styles.backBtn} to="/events" />
 
       <header className={styles.hero}>

@@ -16,6 +16,20 @@
     pointer-events: none;
     z-index: 0;
   }
+
+  &.transparent {
+    background: transparent;
+    z-index: 1; // Ensure it's above the fixed background but still allows seeing through
+
+    &::before {
+      display: none;
+    }
+
+    // Improve all text legibility when using a custom background
+    *, p, h1, h2, h3, li, span {
+       text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8), 0 0 10px rgba(0, 0, 0, 0.2);
+    }
+  }
 }
 
 .backBtn {
