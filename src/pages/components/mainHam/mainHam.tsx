@@ -292,7 +292,7 @@ export default function mainHam({
             alt="Heart Icon"
           />
         </span>{" "}
-        by DVM
+        by GDG VIT Mumbai
       </div>
     </div>
   );
