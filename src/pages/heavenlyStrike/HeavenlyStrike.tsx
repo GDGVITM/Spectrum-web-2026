@@ -1,8 +1,49 @@
 import EventLayout from "../components/eventLayout/EventLayout";
+import { useRef } from "react";
+import { useGSAP } from "@gsap/react";
+import { gsap } from "gsap";
+import styles from "./HeavenlyStrike.module.scss";
 
 export default function HeavenlyStrike() {
+  const bgRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(() => {
+    if (bgRef.current) {
+      gsap.to(bgRef.current, {
+        yPercent: 12,
+        ease: "none",
+        scrollTrigger: {
+          trigger: document.body,
+          start: "top top",
+          end: "bottom top",
+          scrub: true,
+        },
+      });
+    }
+  }, []);
+
   return (
-    <EventLayout
+    <>
+      <div className={styles.backgroundWrapper}>
+        <div className={styles.bgParallax} ref={bgRef} />
+        <div className={styles.fogOverlay} />
+        <div className={styles.rainContainer}>
+          {[...Array(60)].map((_, i) => (
+            <div
+              key={i}
+              className={styles.rainDrop}
+              style={{
+                left: `${Math.random() * 120 - 10}%`,
+                animationDuration: `${Math.random() * 0.5 + 0.3}s`,
+                animationDelay: `${Math.random() * 0.5}s`,
+                opacity: Math.random() * 0.5 + 0.2,
+              }}
+            />
+          ))}
+        </div>
+        <div className={styles.contentOverlay} />
+      </div>
+      <EventLayout
       day="DAY 1"
       date="1st April 2026"
       title="THE HEAVENLY STRIKE"
@@ -83,6 +124,8 @@ export default function HeavenlyStrike() {
         "Violation of time constraints or fixture rules.",
         "Attempt to manipulate results.",
       ]}
+      transparentBackground={true}
     />
+    </>
   );
 }
