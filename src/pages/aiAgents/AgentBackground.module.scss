@@ -1,0 +1,104 @@
+@use "../../assets/global.scss" as *;
+
+.agentBgContainer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: #02000a; // Deep velvet indigo base
+}
+
+.mainBackground {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 300%; // 3-stage narrative: AI Sphere -> Neural Temples -> Torii Path
+  background-image: url("/images/aiAgents/agent_bg.png");
+  background-size: cover;
+  background-position: center;
+  opacity: 0.85;
+  z-index: 0;
+  filter: saturate(1.2) contrast(1.1) brightness(0.9);
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at 50% 50%, 
+    rgba(0, 5, 15, 0.3) 0%, 
+    rgba(0, 5, 15, 0.7) 100%
+  );
+  backdrop-filter: blur(1px);
+  z-index: 1;
+}
+
+.digitalMist {
+  position: absolute;
+  inset: -15% -15%;
+  background: radial-gradient(
+    circle at 50% 50%, 
+    transparent 0%, 
+    rgba(157, 255, 230, 0.03) 50%, 
+    rgba(0, 242, 255, 0.08) 100%
+  );
+  mix-blend-mode: screen;
+  z-index: 2;
+  animation: digitalSway 25s ease-in-out infinite alternate;
+  filter: blur(40px);
+}
+
+@keyframes digitalSway {
+  0% { transform: translate(-1%, -1%) skewX(0deg); }
+  50% { transform: translate(2%, 1%) skewX(1deg); }
+  100% { transform: translate(-1%, 2%) skewX(-1deg); }
+}
+
+.particleContainer {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+}
+
+.codeFragment {
+  position: absolute;
+  font-family: 'Courier New', Courier, monospace;
+  font-weight: bold;
+  color: rgba(157, 255, 230, 0.4); // Muted cyan
+  font-size: 14px; // Larger for glyphs
+  pointer-events: none;
+  opacity: 0;
+  white-space: nowrap;
+}
+
+.neuralNode {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: #9dffe6;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #9dffe6, 0 0 15px rgba(157, 255, 230, 0.3);
+  opacity: 0;
+}
+
+.neuralLine {
+  position: absolute;
+  width: 1px;
+  height: 80px;
+  background: linear-gradient(to bottom, transparent, rgba(157, 255, 230, 0.2), transparent);
+  opacity: 0;
+}
+
+.energyPulse {
+  position: absolute;
+  width: 150px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(157, 255, 230, 0.2), transparent);
+  filter: blur(2px);
+  opacity: 0;
+}

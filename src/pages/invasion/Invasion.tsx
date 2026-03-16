@@ -32,6 +32,10 @@ const SamuraiBackground = () => {
         const startX = Math.random() * 100;
         const startY = Math.random() * 100;
         
+        // Use left/top for distribution
+        particle.style.left = `${startX}%`;
+        particle.style.top = `${startY}%`;
+
         // High contrast colors for ash
         if (className === styles.ash) {
           const colors = ['#ffffff', '#f0f0f0', '#dddddd', '#cccccc', '#ff4500']; // Much brighter palette
@@ -39,8 +43,6 @@ const SamuraiBackground = () => {
         }
 
         gsap.set(particle, {
-          xPercent: startX,
-          yPercent: startY,
           rotation: Math.random() * 360,
           rotationX: Math.random() * 360, // 3D flutter
           rotationY: Math.random() * 360,
@@ -48,12 +50,12 @@ const SamuraiBackground = () => {
           autoAlpha: 0.8,
         });
 
-        const yMove = direction === 'up' ? -(40 + Math.random() * 60) : (40 + Math.random() * 60);
+        const yMove = direction === 'up' ? -(60 + Math.random() * 80) : (60 + Math.random() * 80);
         const xMove = (Math.random() - 0.5) * 60;
 
         gsap.to(particle, {
-          xPercent: `+=${xMove}`,
-          yPercent: `+=${yMove}`,
+          x: `${xMove}vw`,
+          y: `${yMove}vh`,
           rotation: "+=360",
           rotationX: "+=180",
           rotationY: "+=180",
