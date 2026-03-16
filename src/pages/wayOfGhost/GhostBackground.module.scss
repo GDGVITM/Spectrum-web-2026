@@ -24,6 +24,7 @@
   opacity: 0.9;
   z-index: 0;
   filter: saturate(0.7) contrast(1.1) brightness(0.8);
+  will-change: transform;
 }
 
 .overlay {
@@ -80,6 +81,7 @@
   filter: blur(1px);
   opacity: 0;
   box-shadow: 0 0 15px rgba(155, 77, 255, 0.6);
+  will-change: transform;
 }
 
 .wisp {
@@ -94,6 +96,7 @@
   );
   filter: blur(4px);
   opacity: 0;
+  will-change: transform;
 }
 
 .shadowyTrail {
@@ -104,6 +107,7 @@
   filter: blur(30px);
   opacity: 0;
   pointer-events: none;
+  will-change: transform;
 }
 
 .ghostlyPetal {
@@ -114,6 +118,7 @@
   border-radius: 50% 0 50% 50%;
   opacity: 0;
   filter: drop-shadow(0 0 5px rgba(155, 77, 255, 0.2));
+  will-change: transform;
 }
 
 .lanternGlow {
@@ -124,4 +129,5 @@
   filter: blur(15px);
   mix-blend-mode: screen;
   pointer-events: none;
+  will-change: transform;
 }

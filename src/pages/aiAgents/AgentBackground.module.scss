@@ -24,6 +24,7 @@
   opacity: 0.85;
   z-index: 0;
   filter: saturate(1.2) contrast(1.1) brightness(0.9);
+  will-change: transform;
 }
 
 .overlay {
@@ -74,6 +75,7 @@
   pointer-events: none;
   opacity: 0;
   white-space: nowrap;
+  will-change: transform;
 }
 
 .neuralNode {
@@ -84,6 +86,7 @@
   border-radius: 50%;
   box-shadow: 0 0 8px #9dffe6, 0 0 15px rgba(157, 255, 230, 0.3);
   opacity: 0;
+  will-change: transform;
 }
 
 .neuralLine {
@@ -101,4 +104,5 @@
   background: linear-gradient(90deg, transparent, rgba(157, 255, 230, 0.2), transparent);
   filter: blur(2px);
   opacity: 0;
+  will-change: transform;
 }

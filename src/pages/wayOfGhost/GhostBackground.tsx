@@ -65,7 +65,7 @@ const GhostBackground = () => {
             trigger: document.body,
             start: "top top",
             end: "bottom bottom",
-            scrub: 2 + Math.random() * 3,
+            scrub: true,
           },
         });
 

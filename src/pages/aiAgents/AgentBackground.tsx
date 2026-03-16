@@ -25,7 +25,7 @@ const AgentBackground = () => {
         trigger: document.body,
         start: "top top",
         end: "bottom bottom",
-        scrub: 1.5,
+        scrub: true,
       },
     });
 
@@ -55,7 +55,7 @@ const AgentBackground = () => {
             trigger: document.body,
             start: "top top",
             end: "bottom bottom",
-            scrub: 1.5 + Math.random() * 2,
+            scrub: true,
           },
         });
       }
@@ -82,7 +82,7 @@ const AgentBackground = () => {
             trigger: document.body,
             start: "top top",
             end: "bottom bottom",
-            scrub: 2 + Math.random(),
+            scrub: true,
           },
         });
       }
@@ -108,7 +108,7 @@ const AgentBackground = () => {
             trigger: document.body,
             start: "top top",
             end: "bottom bottom",
-            scrub: 1,
+            scrub: true,
           },
         });
       }
