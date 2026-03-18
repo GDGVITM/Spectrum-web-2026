@@ -107,6 +107,11 @@ export default function DrawingPreloader({
         };
         img.onerror = (err) => {
           console.error("Image failed to load", err, img);
+          loadedAssets++;
+          setProgress(
+            (loadedAssets / (imagesToPreload.length + soundsToPreload.length)) *
+            99
+          );
           resolve(img);
         };
       });
@@ -123,7 +128,12 @@ export default function DrawingPreloader({
           resolve(audio);
         };
         audio.onerror = (err) => {
-          console.error("Image failed to load", err, audio);
+          console.error("Sound failed to load", err, audio);
+          loadedAssets++;
+          setProgress(
+            (loadedAssets / (imagesToPreload.length + soundsToPreload.length)) *
+            99
+          );
           resolve(audio);
         };
       });
@@ -230,6 +240,11 @@ export default function DrawingPreloader({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isAnimating]);
+
+  // Debug logging
+  useEffect(() => {
+    console.log("DrawingPreloader state:", { isAnimating, isMobile });
+  }, [isAnimating, isMobile]);
 
   return (
     <div className={styles.overlay} ref={svgContainerRef}>
@@ -583,22 +598,46 @@ export default function DrawingPreloader({
           <div className={styles.percentage}>{Math.round(progress)}%</div>
         </div>
       ) : (
-        <div className={styles.infoContainer}>
+        <div 
+          className={styles.infoContainer}
+          onClick={(e) => {
+            console.log("InfoContainer clicked", e.target);
+          }}
+        >
           <div className={styles.btnContainer}>
             <button
               className={styles.enterButton}
-              onClick={() => {
+              onClick={(e) => {
+                console.log("Button clicked!", e);
+                console.log("Event target:", e.target);
+                console.log("Current target:", e.currentTarget);
+                e.stopPropagation();
                 overlaySetActive();
                 onEnter();
               }}
+              onMouseDown={(e) => {
+                console.log("Mouse down on button", e);
+              }}
+              onMouseUp={(e) => {
+                console.log("Mouse up on button", e);
+              }}
+              onMouseEnter={() => {
+                console.log("Mouse entered button");
+              }}
+              onMouseLeave={() => {
+                console.log("Mouse left button");
+              }}
               onKeyDown={(e) => {
+                console.log("Key down:", e.key);
                 if (e.key === "Enter") {
                   console.log("Enter key pressed2");
-                  // e.preventDefault();
+                  e.preventDefault();
                   overlaySetActive();
                   onEnter();
                 }
               }}
+              tabIndex={0}
+              style={{ outline: '2px solid blue' }} // Debug outline
             >
               <div className={styles.enterButtonText}>Enter</div>
             </button>
