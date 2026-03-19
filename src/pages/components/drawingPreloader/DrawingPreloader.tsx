@@ -7,7 +7,9 @@ const baseImagesToPreload = [
   "/images/doors/Door2.webp",
   "/images/doors/Door3.webp",
   "/images/doors/Door4.webp",
-  "/videos/ink-spread-5.gif",
+  "/videos/ink-spread-5.webp",
+  "/videos/ink-spread-4.webp",
+  "/images/paper-texture.webp",
   "/svgs/landing/hamClouds/cloud1.min.svg",
   "/svgs/landing/hamClouds/cloud2.min.svg",
   "/svgs/landing/hamClouds/cloud3.min.svg",
@@ -41,7 +43,7 @@ const baseImagesToPreload = [
   "/images/aboutus/background.jpg",
   "/images/aboutus/backg.png",
   "/images/aboutus/abtbck.png",
-  "/videos/dragon-reveal.gif",
+  "/videos/dragon-reveal.webp",
   "/images/landing/hamCloud.png",
   "/svgs/landing/hamBack.svg",
   "/svgs/landing/topRightDragon.svg",
@@ -53,7 +55,7 @@ const getSpritePreloadPaths = (isMobile: boolean) => {
   for (let i = 1; i <= 12; i++) {
     paths.push(isMobile 
       ? `/images/New_images_gdg/mobile_sheets/sprite_${i}.webp`
-      : `/images/New_images_gdg/sprite_${i}.png`);
+      : `/images/New_images_gdg/sprite_${i}.webp`);
   }
   return paths;
 };
@@ -61,7 +63,7 @@ const getSpritePreloadPaths = (isMobile: boolean) => {
 const soundsToPreload: string[] = [];
 
 const TOTAL_PATHS = 103;
-const CIRCUMFERENCE = 163;
+const CIRCUMFERENCE = 251.3;
 
 export default function DrawingPreloader({
   className,
@@ -71,11 +73,15 @@ export default function DrawingPreloader({
   onEnter: () => void;
 }) {
   const overlaySetActive = useOverlayStore((state: any) => state.setActive);
-  const [progress, setProgress] = useState(0);
+  const isLandingReady = useOverlayStore((state: any) => state.isLandingReady);
+  const progress = useOverlayStore((state: any) => state.preloaderProgress);
+  const setGlobalProgress = useOverlayStore((state: any) => state.setPreloaderProgress);
+  
   const [showEnterButton, setShowEnterButton] = useState(false);
   const circleRef = useRef<SVGCircleElement>(null);
   const pctTextRef = useRef<SVGTextElement>(null);
   const svgContainerRef = useRef<HTMLDivElement>(null);
+  const loadingStartedRef = useRef(false);
 
   // Initialize paths with stroke-dash animation
   useEffect(() => {
@@ -128,7 +134,7 @@ export default function DrawingPreloader({
       if (normalized >= pathEnd) {
         el.setAttribute("stroke-dashoffset", "0");
         (el as HTMLElement).style.transition = "stroke-dashoffset 2s cubic-bezier(0.4,0,0.2,1)";
-      } else if (normalized > pathStart) {
+      } else if (normalized >= pathStart) {
         const pathProg = (normalized - pathStart) / (pathEnd - pathStart);
         try {
           const len = parseFloat(el.getAttribute("stroke-dasharray") || "200");
@@ -152,25 +158,48 @@ export default function DrawingPreloader({
 
   // Preload assets and simulate progress
   useEffect(() => {
+    if (loadingStartedRef.current) return;
+    loadingStartedRef.current = true;
+
+    // If already finished, don't start the animation again
+    if (progress >= 100) {
+      setShowEnterButton(true);
+      return;
+    }
+
     const isMobile = window.innerWidth < 768;
     const spritePaths = getSpritePreloadPaths(isMobile);
     const allImages = [...baseImagesToPreload, ...spritePaths];
     
+    const CONCURRENCY_LIMIT = 6;
     let imagesLoaded = 0;
     const totalAssets = allImages.length + soundsToPreload.length;
 
+    const loadBatch = async (paths: string[]) => {
+      for (let i = 0; i < paths.length; i += CONCURRENCY_LIMIT) {
+        const batch = paths.slice(i, i + CONCURRENCY_LIMIT);
+        await Promise.all(
+          batch.map((src) => {
+            return new Promise<void>((resolve) => {
+              const img = new Image();
+              img.src = src;
+              img.onload = () => {
+                imagesLoaded++;
+                resolve();
+              };
+              img.onerror = () => {
+                imagesLoaded++;
+                resolve();
+              };
+            });
+          })
+        );
+      }
+    };
+
     if (totalAssets > 0) {
-      allImages.forEach((src) => {
-        const img = new Image();
-        img.src = src;
-        img.onload = () => {
-          imagesLoaded++;
-          console.log(`Preloader: Image loaded (${imagesLoaded}/${totalAssets})`);
-        };
-        img.onerror = () => {
-          imagesLoaded++; // Still count as progress to avoid getting stuck
-          console.warn(`Preloader: Image failed (${imagesLoaded}/${totalAssets})`);
-        };
+      loadBatch(allImages).then(() => {
+        console.log("Preloader: All images loaded");
       });
 
       soundsToPreload.forEach((src) => {
@@ -197,22 +226,22 @@ export default function DrawingPreloader({
       }
 
       // Smooth lerp: if real progress is far ahead, displayProgress will jump faster
-      // Using 0.1 for a smooth but responsive feel
-      const jump = (target - displayProgress) * 0.15;
+      // Increased from 0.15 to 0.25 for more responsive feel
+      const jump = (target - displayProgress) * 0.25;
       if (jump > 0) {
         displayProgress += jump;
       }
       
       if (displayProgress >= 99.9) displayProgress = 100;
       
-      if (displayProgress > 0) {
-        setProgress(displayProgress);
+      if (displayProgress >= 0) {
+        setGlobalProgress(displayProgress);
       }
 
       if (displayProgress >= 99.5 && currentLandingReady) {
         clearInterval(interval);
         setTimeout(() => {
-          setProgress(100);
+          setGlobalProgress(100);
           setTimeout(() => {
             setShowEnterButton(true);
           }, 600);
@@ -220,10 +249,18 @@ export default function DrawingPreloader({
       }
     }, 32); // ~30fps for smooth visual movement
 
-    return () => clearInterval(interval);
-  }, []);
+    return () => {
+      clearInterval(interval);
+      loadingStartedRef.current = false;
+    };
+  }, [setGlobalProgress, isLandingReady, overlaySetActive]);
+
+  const hasEnteredRef = useRef(false);
 
   const handleEnter = () => {
+    if (hasEnteredRef.current) return;
+    hasEnteredRef.current = true;
+
     // Fade out and transition
     const wrapper = svgContainerRef.current?.closest(".preloader-wrapper") as HTMLElement;
     if (wrapper) {
@@ -241,7 +278,7 @@ export default function DrawingPreloader({
   return (
     <div className={`${styles.preloaderContainer} ${className || ""}`}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Noto+Serif+JP:wght@300;400&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Noto+Serif+JP:wght@300;400&family=Shippori+Mincho&family=Abhaya+Libre:wght@400;700;800&family=DM+Serif+Text&family=Ibarra+Real+Nova:wght@600&display=swap');
 
         body {
           background: #f5ede0;
@@ -258,6 +295,7 @@ export default function DrawingPreloader({
           align-items: center;
           justify-content: center;
           background: #f5ede0;
+          pointer-events: none;
         }
 
         .preloader-wrapper::before {
@@ -333,6 +371,7 @@ export default function DrawingPreloader({
           inset: 0;
           width: 100%;
           height: 100%;
+          pointer-events: auto;
         }
 
         .drawing-stage svg {
@@ -428,19 +467,36 @@ export default function DrawingPreloader({
           stroke-width: 1.5;
         }
 
+        .moon-group {
+          transform: translate(820px, 180px);
+          transition: transform 0.5s ease;
+        }
+
+        @media (max-width: 768px) {
+          .moon-group {
+            transform: translate(700px, 220px) scale(0.9);
+          }
+        }
+
+        .progress-track {
+          fill: none;
+          stroke: rgba(192, 176, 99, 0.1);
+          stroke-width: 2;
+        }
+
         .progress-fill {
           fill: none;
-          stroke: #c9a84c;
-          stroke-width: 1.5;
+          stroke: #c0b063;
+          stroke-width: 3;
           stroke-linecap: round;
-          stroke-dasharray: 163;
-          stroke-dashoffset: 163;
+          transition: stroke-dashoffset 0.3s ease;
         }
 
         .progress-pct {
-          font-family: 'Noto Serif JP', serif;
-          font-size: 11px;
-          fill: #1a1410;
+          font-family: 'Japan Ramen', serif;
+          font-size: 24px;
+          font-weight: bold;
+          fill: #c0b063;
           text-anchor: middle;
           dominant-baseline: middle;
         }
@@ -753,11 +809,17 @@ export default function DrawingPreloader({
               <circle id="p97" cx="508" cy="190" r="1.2" fill="#1a1410" stroke="none" />
               <circle id="p98" cx="492" cy="195" r="1.5" fill="#1a1410" stroke="none" />
 
-              {/* Moon circle */}
-              <path className="gold-path" id="p99" strokeWidth="1.5"
-                d="M 700,150 C 700,80 760,30 820,30 C 880,30 940,80 940,150 C 940,220 880,270 820,270 C 760,270 700,220 700,150 Z" />
-              <path className="gold-path" id="p100" strokeWidth="0.8"
-                d="M 720,150 C 720,92 768,48 820,48 C 872,48 920,92 920,150 C 920,208 872,252 820,252 C 768,252 720,208 720,150 Z" opacity="0.5" />
+              {/* Moon circle with progress */}
+              <g className={`moon-group ${showEnterButton ? "hidden" : ""}`}>
+                <circle id="p99" r="85" fill="none" stroke="#c0b063" strokeWidth="1.5" opacity="0.4" strokeDasharray="5,5" />
+                <circle id="p100" r="70" fill="none" stroke="#c0b063" strokeWidth="0.8" opacity="0.2" />
+                
+                {/* Real progress ring */}
+                <circle className="progress-track" r="40" />
+                <circle className="progress-fill" ref={circleRef} r="40" 
+                        strokeDasharray={251.3} strokeDashoffset={251.3} transform="rotate(-90)" />
+                <text className="progress-pct" ref={pctTextRef} dy="0.35em">0%</text>
+              </g>
 
               {/* Flying birds */}
               <path className="draw-path" id="p101" strokeWidth="1"
@@ -776,14 +838,6 @@ export default function DrawingPreloader({
               <span className="title-kanji">スペクトラム・ウィーク</span>
               <div className="title-main">SPECTRUM WEEK</div>
               <div className="title-sub">GDG VIT MUMBAI · 2026</div>
-            </div>
-
-            <div className={`progress-ring-wrap ${showEnterButton ? "hidden" : ""}`}>
-              <svg className="progress-ring" width="52" height="52" viewBox="0 0 52 52">
-                <circle className="progress-track" cx="26" cy="26" r="22" />
-                <circle className="progress-fill" ref={circleRef} cx="26" cy="26" r="22" />
-                <text className="progress-pct" ref={pctTextRef} x="26" y="28" textAnchor="middle">0%</text>
-              </svg>
             </div>
 
             <div className={`enter-btn-wrap ${showEnterButton ? "visible" : ""}`}>
