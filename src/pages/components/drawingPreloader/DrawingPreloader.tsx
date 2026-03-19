@@ -2,7 +2,7 @@ import { useRef, useEffect, useState } from "react";
 import styles from "./DrawingPreloader.module.scss";
 import useOverlayStore from "../../../utils/store";
 
-const imagesToPreload = [
+const baseImagesToPreload = [
   "/images/doors/Door1.webp",
   "/images/doors/Door2.webp",
   "/images/doors/Door3.webp",
@@ -46,19 +46,17 @@ const imagesToPreload = [
   "/svgs/landing/hamBack.svg",
   "/svgs/landing/topRightDragon.svg",
   "/svgs/landing/heartIcon.svg",
-  "/images/New_images_gdg/sprite_1.png",
-  "/images/New_images_gdg/sprite_2.png",
-  "/images/New_images_gdg/sprite_3.png",
-  "/images/New_images_gdg/sprite_4.png",
-  "/images/New_images_gdg/sprite_5.png",
-  "/images/New_images_gdg/sprite_6.png",
-  "/images/New_images_gdg/sprite_7.png",
-  "/images/New_images_gdg/sprite_8.png",
-  "/images/New_images_gdg/sprite_9.png",
-  "/images/New_images_gdg/sprite_10.png",
-  "/images/New_images_gdg/sprite_11.png",
-  "/images/New_images_gdg/sprite_12.png",
 ];
+
+const getSpritePreloadPaths = (isMobile: boolean) => {
+  const paths = [];
+  for (let i = 1; i <= 12; i++) {
+    paths.push(isMobile 
+      ? `/images/New_images_gdg/mobile_sheets/sprite_${i}.webp`
+      : `/images/New_images_gdg/sprite_${i}.png`);
+  }
+  return paths;
+};
 
 const soundsToPreload: string[] = [];
 
@@ -154,11 +152,15 @@ export default function DrawingPreloader({
 
   // Preload assets and simulate progress
   useEffect(() => {
+    const isMobile = window.innerWidth < 768;
+    const spritePaths = getSpritePreloadPaths(isMobile);
+    const allImages = [...baseImagesToPreload, ...spritePaths];
+    
     let imagesLoaded = 0;
-    const totalAssets = imagesToPreload.length + soundsToPreload.length;
+    const totalAssets = allImages.length + soundsToPreload.length;
 
     if (totalAssets > 0) {
-      imagesToPreload.forEach((src) => {
+      allImages.forEach((src) => {
         const img = new Image();
         img.src = src;
         img.onload = () => {
