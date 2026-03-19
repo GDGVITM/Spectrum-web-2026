@@ -35,8 +35,8 @@ body {
   -webkit-mask-image: linear-gradient(transparent, transparent);
 
   &.mask {
-    mask-image: url("/videos/ink-spread-5.gif");
-    -webkit-mask-image: url("/videos/ink-spread-5.gif");
+    mask-image: url("/videos/ink-spread-5.webp");
+    -webkit-mask-image: url("/videos/ink-spread-5.webp");
     mask-repeat: no-repeat;
     -webkit-mask-repeat: no-repeat;
     mask-size: cover;
@@ -100,40 +100,20 @@ body {
   }
 }
 
-.mainHamContainer {
+.menuSection {
   position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 10000;
-
-  .showMainHam {
-    position: fixed;
-    height: 100%;
-    width: 100%;
-    top: 0;
-    left: 0;
-    visibility: hidden;
-    opacity: 0;
-    transition: all 0.5s ease-in-out;
-    pointer-events: none;
-    clip-path: circle(0% at 60px 60px);
-
-    @media (max-width: 730px) {
-      clip-path: circle(0% at calc(100vw - 48px) 70px);
-    }
-  }
-
-  &.mainHamOpen {
-    .showMainHam {
-      visibility: visible;
-      opacity: 1;
-      pointer-events: all;
-      clip-path: circle(150% at 60px 60px);
-
-      @media (max-width: 730px) {
-        clip-path: circle(150% at calc(100vw - 48px) 70px);
-      }
-    }
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1000; // High enough to cover navbar and content
+  background-color: #340d0d; // Match menu background
+  transition: opacity 1s ease;
+  pointer-events: none;
+  
+  opacity: 0;
+  &.revealed {
+    opacity: 1;
+    pointer-events: auto;
   }
 }
 
@@ -149,6 +129,7 @@ body {
   width: 40px;
   height: 40px;
   cursor: pointer;
+  pointer-events: auto;
   border-radius: 50%;
   border: 2px solid #00f7ff;
 
