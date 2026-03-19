@@ -10,7 +10,7 @@ import useOverlayStore from "../../utils/store";
 import Lenis from "@studio-freight/lenis";
 import { gsap } from "gsap";
 
-const FRAME_COUNT = 239; 
+const FRAME_COUNT = 239;
 const FRAME_START = 1;
 
 // Path to images in public directory
@@ -34,14 +34,15 @@ export default function LandingRevamp({
   const frameRef = useRef<number>(FRAME_START);
   const lenisRef = useRef<Lenis | null>(null);
   const [imagesLoaded, setImagesLoaded] = useState(0);
-  
+
+
   const isMainHamOpen = useMainHamStore((state) => state.isMainHamOpen);
   const setIsMainHamOpen = useMainHamStore((state) => state.setMainHamOpen);
-  
+
   const overlayIsActive = useOverlayStore((state) => state.isActive);
   const removeGif = useOverlayStore((state) => state.removeGif);
   const setRemoveGif = useOverlayStore((state) => state.setRemoveGif);
-  
+
   const [styleTag, setstyleTag] = useState([
     audioRef.current?.paused ? styles.soundLine2 : styles.soundLine,
     styles.soundCross2,
@@ -56,7 +57,7 @@ export default function LandingRevamp({
     if (ctx && img && img.complete) {
       const canvasWidth = canvas.width;
       const canvasHeight = canvas.height;
-      
+
       // Calculate aspect ratio for "cover" effect
       const scale = Math.max(canvasWidth / img.width, canvasHeight / img.height);
       const x = (canvasWidth - img.width * scale) / 2;
@@ -70,32 +71,33 @@ export default function LandingRevamp({
   // Initialize Lenis
   useEffect(() => {
     lenisRef.current = new Lenis({
-        duration: 2,
-        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-        orientation: "vertical",
-        smoothWheel: true,
-        wheelMultiplier: 1.1,
+      duration: 2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      orientation: "vertical",
+      smoothWheel: true,
+      wheelMultiplier: 1.1,
     });
 
     const raf = (time: number) => {
-        lenisRef.current?.raf(time);
-        requestAnimationFrame(raf);
+      lenisRef.current?.raf(time);
+      requestAnimationFrame(raf);
     };
     requestAnimationFrame(raf);
 
     return () => {
-        lenisRef.current?.destroy();
+      lenisRef.current?.destroy();
     };
   }, []);
 
   const updateFrame = useCallback(() => {
     if (!lenisRef.current || !scrollSectionRef.current) return;
-    
+
     const scrollTop = lenisRef.current.scroll || 0;
     const sectionHeight = scrollSectionRef.current.offsetHeight;
     const maxScroll = sectionHeight - window.innerHeight;
-    
+
     const scrollFraction = Math.min(1, Math.max(0, scrollTop / maxScroll));
+
     const frameIndex = Math.min(
       FRAME_COUNT,
       Math.max(FRAME_START, Math.round(scrollFraction * (FRAME_COUNT - FRAME_START)) + FRAME_START)
@@ -110,16 +112,18 @@ export default function LandingRevamp({
   // Sync frame updates with Lenis
   useEffect(() => {
     if (!lenisRef.current) return;
-    
+
     const handleScroll = () => {
-        updateFrame();
+      updateFrame();
     };
 
     lenisRef.current.on("scroll", handleScroll);
     return () => {
-        lenisRef.current?.off("scroll", handleScroll);
+      lenisRef.current?.off("scroll", handleScroll);
     };
   }, [updateFrame]);
+
+
 
   // Preload frames
   useEffect(() => {
@@ -129,7 +133,7 @@ export default function LandingRevamp({
       let loaded = 0;
       for (let i = FRAME_START; i <= FRAME_COUNT; i++) {
         if (isCancelled) break;
-        
+
         const img = new Image();
         img.src = getFramePath(i);
         img.onload = () => {
@@ -142,7 +146,7 @@ export default function LandingRevamp({
         };
       }
     };
-    
+
     preloadFrames();
     return () => { isCancelled = true; };
   }, [renderFrame]);
@@ -155,56 +159,56 @@ export default function LandingRevamp({
     const WHEEL_THRESHOLD = 30; // Lower threshold for trackpads
 
     const handleWheel = (e: WheelEvent) => {
-        if (!lenisRef.current || imagesLoaded < FRAME_COUNT * 0.5) return;
+      if (!lenisRef.current || imagesLoaded < FRAME_COUNT * 0.5) return;
 
-        const currentScroll = lenisRef.current.scroll || 0;
-        const maxScroll = scrollSectionRef.current?.offsetHeight ? scrollSectionRef.current.offsetHeight - window.innerHeight : 0;
-        
-        // Accumulate delta to detect intent
-        wheelAccumulator += Math.abs(e.deltaY);
+      const currentScroll = lenisRef.current.scroll || 0;
+      const maxScroll = scrollSectionRef.current?.offsetHeight ? scrollSectionRef.current.offsetHeight - window.innerHeight : 0;
 
-        // Auto scroll triggers if user is in the frame section
-        if (currentScroll < maxScroll && wheelAccumulator > WHEEL_THRESHOLD) {
-            const targetScroll = e.deltaY > 0 ? maxScroll : 0;
-            
-            // Check if we already are near the target
-            if (Math.abs(currentScroll - targetScroll) < 50) return;
+      // Accumulate delta to detect intent
+      wheelAccumulator += Math.abs(e.deltaY);
 
-            // Handle interruption: if user scrolls back, kill the auto-animation
-            if (animationTween && ((e.deltaY > 0 && animationTween.vars.scroll < currentScroll) || (e.deltaY < 0 && animationTween.vars.scroll > currentScroll))) {
-                animationTween.kill();
-                isAnimating = false;
-                wheelAccumulator = 0;
-            }
+      // Auto scroll triggers if user is in the frame section
+      if (currentScroll < maxScroll && wheelAccumulator > WHEEL_THRESHOLD) {
+        const targetScroll = e.deltaY > 0 ? maxScroll : 0;
 
-            if (!isAnimating) {
-                isAnimating = true;
-                const scrollProxy = { value: currentScroll };
-                animationTween = gsap.to(scrollProxy, {
-                    value: targetScroll,
-                    duration: 5,
-                    ease: "power2.inOut",
-                    onUpdate: () => {
-                        lenisRef.current?.scrollTo(scrollProxy.value, { immediate: true });
-                        updateFrame();
-                    },
-                    onComplete: () => {
-                        isAnimating = false;
-                        animationTween = null;
-                        wheelAccumulator = 0;
-                    }
-                });
-            }
+        // Check if we already are near the target
+        if (Math.abs(currentScroll - targetScroll) < 50) return;
+
+        // Handle interruption: if user scrolls back, kill the auto-animation
+        if (animationTween && ((e.deltaY > 0 && animationTween.vars.scroll < currentScroll) || (e.deltaY < 0 && animationTween.vars.scroll > currentScroll))) {
+          animationTween.kill();
+          isAnimating = false;
+          wheelAccumulator = 0;
         }
-        
-        // Reset accumulator if no events for a while
-        setTimeout(() => { wheelAccumulator = 0; }, 150);
+
+        if (!isAnimating) {
+          isAnimating = true;
+          const scrollProxy = { value: currentScroll };
+          animationTween = gsap.to(scrollProxy, {
+            value: targetScroll,
+            duration: 5,
+            ease: "power2.inOut",
+            onUpdate: () => {
+              lenisRef.current?.scrollTo(scrollProxy.value, { immediate: true });
+              updateFrame();
+            },
+            onComplete: () => {
+              isAnimating = false;
+              animationTween = null;
+              wheelAccumulator = 0;
+            }
+          });
+        }
+      }
+
+      // Reset accumulator if no events for a while
+      setTimeout(() => { wheelAccumulator = 0; }, 150);
     };
 
     window.addEventListener("wheel", handleWheel, { passive: true });
     return () => {
-        window.removeEventListener("wheel", handleWheel);
-        if (animationTween) animationTween.kill();
+      window.removeEventListener("wheel", handleWheel);
+      if (animationTween) animationTween.kill();
     };
   }, [imagesLoaded, updateFrame]);
 
@@ -258,7 +262,7 @@ export default function LandingRevamp({
   }, [removeGif]);
 
   return (
-    <div 
+    <div
       className={`${styles.wrapper} ${!removeGif ? styles.pointerNoneEvent : ""} ${overlayIsActive ? styles.mask : ""}`}
       style={{
         maskImage: removeGif ? "none" : undefined,
@@ -266,7 +270,7 @@ export default function LandingRevamp({
       }}
     >
       <Navbar />
-      
+
       {/* Scrollable container for pinning canvas */}
       <div className={styles.scrollSection} ref={scrollSectionRef}>
         <div className={styles.canvasContainer}>

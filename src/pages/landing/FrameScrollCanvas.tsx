@@ -57,7 +57,7 @@ export default function FrameScrollCanvas() {
             requestAnimationFrame(animate);
         };
         const id = requestAnimationFrame(animate);
-        
+
         return () => cancelAnimationFrame(id);
     }, [updateFrameIndex]);
 
@@ -85,10 +85,10 @@ export default function FrameScrollCanvas() {
 
         const handleWheel = (e: WheelEvent) => {
             if (!lenisRef.current || imagesLoaded < totalFrames) return;
-            
+
             const currentScroll = lenisRef.current.scroll?.actual || 0;
             const maxScroll = (totalFrames * 50) - window.innerHeight; // Match scrollSection height
-            
+
             // Accumulate delta to detect intent
             wheelAccumulator += Math.abs(e.deltaY);
 
@@ -108,7 +108,7 @@ export default function FrameScrollCanvas() {
                     const scrollProxy = { value: currentScroll };
                     animationTween = gsap.to(scrollProxy, {
                         value: targetScroll,
-                        duration: 5, 
+                        duration: 5,
                         ease: "power2.inOut",
                         onUpdate: () => {
                             lenisRef.current?.scrollTo(scrollProxy.value, { immediate: true });
@@ -148,7 +148,7 @@ export default function FrameScrollCanvas() {
                     };
                     img.onerror = (err) => {
                         console.error("Failed to load some frame images", err);
-                        resolve(); 
+                        resolve();
                     };
                 })
             );
@@ -169,7 +169,7 @@ export default function FrameScrollCanvas() {
         if (!ctx) return;
 
         const imageCache = new Map<string, HTMLImageElement>();
-        
+
         const preloadImages = () => {
             framePaths.forEach((path) => {
                 const img = new Image();
@@ -194,7 +194,7 @@ export default function FrameScrollCanvas() {
             if (idx < 0 || idx >= framePaths.length) return;
             const path = framePaths[idx];
             const img = imageCache.get(path);
-            
+
             if (img && img.complete) {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
@@ -216,7 +216,7 @@ export default function FrameScrollCanvas() {
             <div className={styles.canvasContainer}>
                 <canvas ref={canvasRef} className={styles.canvas} />
             </div>
-            
+
             {/* Transparent element to provide scroll height */}
             <div className={styles.scrollSection} style={{ height: `${totalFrames * 50}px` }} />
 
