@@ -3,7 +3,7 @@ import useOverlayStore from "./utils/store";
 import LandingRevamp from "./pages/landingRevamp/LandingRevamp";
 import BreadCrumb from "./pages/components/breadCrumb/BreadCrumb";
 import bgMusic from "/sounds/bg-music2.mp3";
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 
 export default function Homepage({
   goToPage,
@@ -24,6 +24,11 @@ export default function Homepage({
   };
   const removeGif = useOverlayStore((state) => state.removeGif);
   const audioRef = useRef<HTMLAudioElement>(null);
+
+  useEffect(() => {
+    // Force scroll to top when user navigates back to home
+    window.scrollTo(0, 0);
+  }, []);
 
   const toggleMusic = () => {
     if (!audioRef.current) return;

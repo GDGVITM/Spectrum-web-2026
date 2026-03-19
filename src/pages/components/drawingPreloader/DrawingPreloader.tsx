@@ -3,10 +3,10 @@ import styles from "./DrawingPreloader.module.scss";
 import useOverlayStore from "../../../utils/store";
 
 const imagesToPreload = [
-  "/images/doors/Door1.png",
-  "/images/doors/Door2.png",
-  "/images/doors/Door3.png",
-  "/images/doors/Door4.png",
+  "/images/doors/Door1.webp",
+  "/images/doors/Door2.webp",
+  "/images/doors/Door3.webp",
+  "/images/doors/Door4.webp",
   "/videos/ink-spread-5.gif",
   "/svgs/landing/hamClouds/cloud1.min.svg",
   "/svgs/landing/hamClouds/cloud2.min.svg",
@@ -14,23 +14,8 @@ const imagesToPreload = [
   "/svgs/landing/hamClouds/cloud4.min.svg",
   "/svgs/landing/hamClouds/cloud5.min.svg",
   "/svgs/landing/hamClouds/cloud6.min.svg",
-  "/svgs/landing/insta.svg",
-  "/svgs/landing/linkden.svg",
   "/svgs/landing/moon1.svg",
   "/svgs/landing/moonHam.svg",
-  "/images/landing/background1.png",
-  "/images/landing/tree1.png",
-  "/svgs/landing/x.svg",
-  "/svgs/landing/wire.svg",
-  "/images/landing/mobileMountains.png",
-  "/svgs/landing/instaLamp.svg",
-  "/svgs/landing/linkdenLamp.svg",
-  "/svgs/landing/mobileBackground.svg",
-  "/svgs/landing/mobileRegisterBtn.svg",
-  "/svgs/landing/registerBtn.svg",
-  "/images/branding/gdg-spectrum-logo.png",
-  "/images/branding/gdg-spectrum-banner.png",
-  "/images/landing/mobileCloud.png",
   "/svgs/aboutus/letter1.svg",
   "/svgs/aboutus/letter2.svg",
   "/svgs/aboutus/letter3.svg",
@@ -57,6 +42,10 @@ const imagesToPreload = [
   "/images/aboutus/backg.png",
   "/images/aboutus/abtbck.png",
   "/videos/dragon-reveal.gif",
+  "/images/landing/hamCloud.png",
+  "/svgs/landing/hamBack.svg",
+  "/svgs/landing/topRightDragon.svg",
+  "/svgs/landing/heartIcon.svg",
   "/images/New_images_gdg/sprite_1.png",
   "/images/New_images_gdg/sprite_2.png",
   "/images/New_images_gdg/sprite_3.png",
@@ -194,40 +183,40 @@ export default function DrawingPreloader({
       });
     }
 
-    let simulatedProgress = 0;
+    let displayProgress = 0;
     const interval = setInterval(() => {
-      // Blend simulation with real loading (if any assets)
-      const increment = Math.random() * 2 + 0.5;
-      simulatedProgress = Math.min(simulatedProgress + increment, 99);
-
-      const realProgress =
-        totalAssets > 0 ? (imagesLoaded / totalAssets) * 100 : 100;
-
-      // Use the minimum of simulated and real to ensure we don't finish before assets are ready
-      const displayProgress =
-        totalAssets > 0
-          ? Math.min(simulatedProgress, realProgress)
-          : simulatedProgress;
-
-      setProgress(displayProgress);
-
-      // Check live state of the store to avoid stale closure
+      const realAssetProgress = totalAssets > 0 ? (imagesLoaded / totalAssets) * 100 : 100;
       const currentLandingReady = useOverlayStore.getState().isLandingReady;
+      
+      // Target is real progress, but capped at 99 if canvas isn't ready
+      let target = realAssetProgress;
+      if (target >= 99 && !currentLandingReady) {
+        target = 99;
+      }
 
-      if (
-        simulatedProgress >= 99 &&
-        (totalAssets === 0 || imagesLoaded >= totalAssets) &&
-        currentLandingReady
-      ) {
+      // Smooth lerp: if real progress is far ahead, displayProgress will jump faster
+      // Using 0.1 for a smooth but responsive feel
+      const jump = (target - displayProgress) * 0.15;
+      if (jump > 0) {
+        displayProgress += jump;
+      }
+      
+      if (displayProgress >= 99.9) displayProgress = 100;
+      
+      if (displayProgress > 0) {
+        setProgress(displayProgress);
+      }
+
+      if (displayProgress >= 99.5 && currentLandingReady) {
         clearInterval(interval);
         setTimeout(() => {
           setProgress(100);
           setTimeout(() => {
             setShowEnterButton(true);
-          }, 800);
-        }, 300);
+          }, 600);
+        }, 200);
       }
-    }, 100);
+    }, 32); // ~30fps for smooth visual movement
 
     return () => clearInterval(interval);
   }, []);
