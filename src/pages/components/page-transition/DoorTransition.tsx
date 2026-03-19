@@ -70,20 +70,20 @@ export default function DoorTransition({
       await Promise.all([
         c1.start({
           "--dx": "0%",
-          transition: { duration: 0.7, ease: "easeInOut" },
+          transition: { duration: 0.45, ease: "easeInOut" },
         }),
         c4.start({
           "--dx": "0%",
-          transition: { duration: 0.7, ease: "easeInOut" },
+          transition: { duration: 0.45, ease: "easeInOut" },
         }),
 
         c2.start({
           "--dx": "0%",
-          transition: { duration: 0.9, ease: "easeInOut" },
+          transition: { duration: 0.6, ease: "easeInOut" },
         }),
         c3.start({
           "--dx": "0%",
-          transition: { duration: 0.9, ease: "easeInOut" },
+          transition: { duration: 0.6, ease: "easeInOut" },
         }),
       ]);
       // if (page ==="/register")
@@ -103,25 +103,25 @@ export default function DoorTransition({
         await Promise.all([
           c2.start({
             "--dx": START.innerLeft,
-            transition: { duration: 0.7, ease: "easeInOut" },
+            transition: { duration: 0.45, ease: "easeInOut" },
           }),
           c3.start({
             "--dx": START.innerRight,
-            transition: { duration: 0.7, ease: "easeInOut" },
+            transition: { duration: 0.45, ease: "easeInOut" },
           }),
 
           c1.start({
             "--dx": START.outerLeft,
-            transition: { duration: 0.9, ease: "easeInOut" },
+            transition: { duration: 0.6, ease: "easeInOut" },
           }),
           c4.start({
             "--dx": START.outerRight,
-            transition: { duration: 0.9, ease: "easeInOut" },
+            transition: { duration: 0.6, ease: "easeInOut" },
           }),
         ]);
 
         if (!cancelled) onOpened?.();
-      }, 500);
+      }, 300);
     };
 
     if (phase === "closing") runClosing();
