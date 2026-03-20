@@ -18,47 +18,12 @@ const baseImagesToPreload = [
   "/svgs/landing/hamClouds/cloud6.min.svg",
   "/svgs/landing/moon1.svg",
   "/svgs/landing/moonHam.svg",
-  "/svgs/aboutus/letter1.svg",
-  "/svgs/aboutus/letter2.svg",
-  "/svgs/aboutus/letter3.svg",
-  "/svgs/aboutus/letter4.svg",
-  "/svgs/aboutus/letter5.svg",
-  "/svgs/aboutus/letter6.svg",
-  "/svgs/aboutus/letter7.svg",
-  "/svgs/aboutus/letter8.svg",
-  "/svgs/aboutus/header.svg",
-  "/svgs/aboutus/fan.png",
-  "/svgs/aboutus/prev.svg",
-  "/svgs/aboutus/pause.svg",
-  "/svgs/aboutus/next.svg",
-  "/svgs/aboutus/reghead.svg",
-  "/svgs/aboutus/play.svg",
-  "/svgs/aboutus/nextarr.svg",
-  "/svgs/aboutus/borde.svg",
-  "/svgs/aboutus/instaicon.svg",
-  "/svgs/aboutus/xicon.svg",
-  "/svgs/aboutus/linkedin.svg",
-  "/svgs/aboutus/yticon.svg",
-  "/svgs/aboutus/abtus.svg",
-  "/images/aboutus/background.jpg",
-  "/images/aboutus/backg.png",
-  "/images/aboutus/abtbck.png",
   "/videos/dragon-reveal.webp",
   "/images/landing/hamCloud.png",
   "/svgs/landing/hamBack.svg",
   "/svgs/landing/topRightDragon.svg",
   "/svgs/landing/heartIcon.svg",
 ];
-
-const getSpritePreloadPaths = (isMobile: boolean) => {
-  const paths = [];
-  for (let i = 1; i <= 12; i++) {
-    paths.push(isMobile 
-      ? `/images/New_images_gdg/mobile_sheets/sprite_${i}.webp`
-      : `/images/New_images_gdg/sprite_${i}.webp`);
-  }
-  return paths;
-};
 
 const soundsToPreload: string[] = [];
 
@@ -167,9 +132,7 @@ export default function DrawingPreloader({
       return;
     }
 
-    const isMobile = window.innerWidth < 768;
-    const spritePaths = getSpritePreloadPaths(isMobile);
-    const allImages = [...baseImagesToPreload, ...spritePaths];
+    const allImages = [...baseImagesToPreload];
     
     const CONCURRENCY_LIMIT = 6;
     let imagesLoaded = 0;
@@ -216,7 +179,11 @@ export default function DrawingPreloader({
 
     let displayProgress = 0;
     const interval = setInterval(() => {
-      const realAssetProgress = totalAssets > 0 ? (imagesLoaded / totalAssets) * 100 : 100;
+      const spritesLoaded = useOverlayStore.getState().spritesLoaded;
+      const combinedLoaded = imagesLoaded + spritesLoaded;
+      const totalCombinedAssets = totalAssets + 12; // 12 sprites handled by LandingRevamp
+      
+      const realAssetProgress = totalCombinedAssets > 0 ? (combinedLoaded / totalCombinedAssets) * 100 : 100;
       const currentLandingReady = useOverlayStore.getState().isLandingReady;
       
       // Target is real progress, but capped at 99 if canvas isn't ready
