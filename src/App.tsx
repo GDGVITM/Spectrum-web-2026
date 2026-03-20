@@ -8,10 +8,15 @@ import HeavenlyStrike from "./pages/heavenlyStrike/HeavenlyStrike";
 import AiAgents from "./pages/aiAgents/AiAgents";
 import WayOfGhost from "./pages/wayOfGhost/WayOfGhost";
 import Invasion from "./pages/invasion/Invasion";
+import bgMusic from "/sounds/bg-music2.mp3";
+import useOverlayStore from "./utils/store";
+import SoundToggle from "./pages/components/soundToggle/SoundToggle";
 
-export const navContext = createContext<{ goToPage?: (page: string) => void }>(
-  {}
-);
+export const navContext = createContext<{
+  goToPage?: (page: string) => void;
+  playMusic?: () => void;
+  toggleMusic?: () => void;
+}>({});
 
 const pageList = [
   "home",
@@ -71,9 +76,38 @@ export default function App() {
       setDoorPhase("closing");
     }
   };
+  const setIsPlaying = useOverlayStore((state) => state.setIsPlaying);
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  const toggleMusic = () => {
+    if (!audioRef.current) return;
+    if (audioRef.current.paused) {
+      audioRef.current.play().catch(console.error);
+      setIsPlaying(true);
+    } else {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    }
+  };
+
+  const playMusic = () => {
+    if (audioRef.current) {
+      audioRef.current.play().catch(console.error);
+      setIsPlaying(true);
+    }
+  };
 
   return (
-    <navContext.Provider value={{ goToPage }}>
+    <navContext.Provider value={{ goToPage, playMusic, toggleMusic }}>
+      <audio
+        src={bgMusic}
+        loop
+        ref={(el) => {
+          audioRef.current = el;
+          if (el) el.volume = 0.2;
+        }}
+      />
+      <SoundToggle toggleMusic={toggleMusic} />
       <DoorTransition
         phase={doorPhase}
         onClosed={handleDoorsClosed}
