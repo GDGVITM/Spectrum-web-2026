@@ -6,26 +6,34 @@ type overlayActive = {
   isLandingReady: boolean;
   preloaderProgress: number;
   bitMapCache: ImageBitmap[][] | null;
+  isPlaying: boolean;
   setActive: () => void;
   setRemoveGif: () => void;
   setLandingReady: (ready: boolean) => void;
   setPreloaderProgress: (progress: number) => void;
   setBitMapCache: (cache: ImageBitmap[][]) => void;
+  setIsPlaying: (playing: boolean) => void;
+  togglePlaying: () => void;
   resetActive: () => void;
   resetRemoveGif: () => void;
 };
 
+const isIntroPlayed = typeof window !== "undefined" ? sessionStorage.getItem("introPlayed") === "true" : false;
+
 const useOverlayStore = create<overlayActive>((set) => ({
-  isActive: false,
-  removeGif: false,
+  isActive: isIntroPlayed,
+  removeGif: isIntroPlayed,
   isLandingReady: false,
   preloaderProgress: 0,
   bitMapCache: null,
+  isPlaying: false,
   setActive: () => set({ isActive: true }),
   setRemoveGif: () => set({ removeGif: true }),
   setLandingReady: (ready) => set({ isLandingReady: ready }),
   setPreloaderProgress: (progress) => set({ preloaderProgress: progress }),
   setBitMapCache: (cache) => set({ bitMapCache: cache }),
+  setIsPlaying: (playing) => set({ isPlaying: playing }),
+  togglePlaying: () => set((state) => ({ isPlaying: !state.isPlaying })),
   resetActive: () => set({ isActive: false }),
   resetRemoveGif: () => set({ removeGif: false }),
 }));
