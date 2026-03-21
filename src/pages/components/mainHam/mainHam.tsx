@@ -57,7 +57,7 @@ export default function mainHam({
       url: "/events",
     },
     {
-      title: "HEAVENLY STRIKE",
+      title: "The Last Standing Ronin",
       cloud: hamCloud,
       classNameDiv: styles.sponsDiv,
       classNameText: styles.sponsText,
