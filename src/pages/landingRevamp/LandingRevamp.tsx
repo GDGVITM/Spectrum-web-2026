@@ -57,7 +57,8 @@ export default function LandingRevamp({
   const socialLinksRef = useRef<HTMLDivElement>(null);
   const logoContainerRef = useRef<HTMLDivElement>(null);
 
-  const [, setAllLoaded] = useState(false);
+  const [allLoaded, setAllLoaded] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0 });
 
   const isMainHamOpen = useMainHamStore((s) => s.isMainHamOpen);
@@ -113,7 +114,20 @@ export default function LandingRevamp({
 
     const cw = canvas.width;
     const ch = canvas.height;
-    const scale = Math.max(cw / fw, ch / fh);
+
+    const coverScale = Math.max(cw / fw, ch / fh);
+    const containScale = Math.min(cw / fw, ch / fh);
+
+    // Smoothly transition from cover to contain in the last frames (sprite sheet 12)
+    let scale = coverScale;
+    const transitionStart = 180;
+    const transitionEnd = 210;
+
+    if (fi > transitionStart) {
+      const t = Math.min(1, (fi - transitionStart) / (transitionEnd - transitionStart));
+      scale = lerp(coverScale, containScale, t);
+    }
+
     const dx = (cw - fw * scale) / 2;
     const dy = (ch - fh * scale) / 2;
 
@@ -140,6 +154,7 @@ export default function LandingRevamp({
     } else if (fraction < 0.85) {
       if (isMainHamOpen) setIsMainHamOpen(false);
     }
+    setIsScrolled(fraction > 0.05 && fraction < 0.95);
   }, [isMainHamOpen, setIsMainHamOpen]);
 
   // ─── Preload all sprites (Robust Singleton) ─────────────────────────────────
@@ -494,7 +509,7 @@ export default function LandingRevamp({
       {/* ─── Scroll Section (Canvas) ───────────────────────────────────── */}
       <div className={styles.scrollSection} ref={scrollSectionRef}>
         <div className={styles.canvasContainer}>
-          <canvas ref={canvasRef} className={styles.mainCanvas} />
+          <canvas ref={canvasRef} className={`${styles.mainCanvas} ${allLoaded ? styles.visible : ""}`} />
         </div>
       </div>
 
@@ -513,7 +528,7 @@ export default function LandingRevamp({
       <div className={styles.contentOverlay}>
         <div
           className={`${styles.scrollIndicator} ${
-            !removeGif ? styles.hidden : ""
+            isScrolled || !removeGif ? styles.hidden : ""
           }`}
         >
           <div className={styles.mouse}>
