@@ -201,6 +201,7 @@
       right: 22.5%;
       cursor: pointer;
       transition: transform 0.3s ease;
+
       &:hover {
         transform: scale(1.05);
       }
@@ -569,7 +570,11 @@
   }
 
   .backBtn {
-    cursor: pointer;
+    cursor: grab;
+
+    &:active {
+      cursor: grabbing;
+    }
 
     .backIcon {
       z-index: 5;
