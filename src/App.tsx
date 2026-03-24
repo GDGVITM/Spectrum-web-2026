@@ -1,17 +1,28 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { useState, useRef, useEffect, createContext } from "react";
-import Homepage from "./Homepage";
+import { useState, useRef, useEffect, createContext, lazy, Suspense } from "react";
 import DoorTransition from "./pages/components/page-transition/DoorTransition";
-import AboutUs from "./pages/aboutus/AboutUs";
-import Events from "./pages/events/Events";
-import HeavenlyStrike from "./pages/heavenlyStrike/HeavenlyStrike";
-import AiAgents from "./pages/aiAgents/AiAgents";
-import WayOfGhost from "./pages/wayOfGhost/WayOfGhost";
-import Invasion from "./pages/invasion/Invasion";
+import useOverlayStore from "./utils/store";
+import SoundToggle from "./pages/components/soundToggle/SoundToggle";
+import bgMusic from "/sounds/bg-music2.mp3";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
-export const navContext = createContext<{ goToPage?: (page: string) => void }>(
-  {}
-);
+
+import Homepage from "./Homepage";
+
+// Lazy-loaded components
+const AboutUs = lazy(() => import("./pages/aboutus/AboutUs"));
+const Events = lazy(() => import("./pages/events/Events"));
+const HeavenlyStrike = lazy(() => import("./pages/heavenlyStrike/HeavenlyStrike"));
+const AiAgents = lazy(() => import("./pages/aiAgents/AiAgents"));
+const WayOfGhost = lazy(() => import("./pages/wayOfGhost/WayOfGhost"));
+const Invasion = lazy(() => import("./pages/invasion/Invasion"));
+
+export const navContext = createContext<{
+  goToPage?: (page: string) => void;
+  playMusic?: () => void;
+  toggleMusic?: () => void;
+}>({});
 
 const pageList = [
   "home",
@@ -57,7 +68,7 @@ export default function App() {
 
     setTimeout(() => {
       setDoorPhase("opening");
-    }, 500);
+    }, 300);
   };
 
   const handleDoorsOpened = () => {
@@ -71,9 +82,38 @@ export default function App() {
       setDoorPhase("closing");
     }
   };
+  const setIsPlaying = useOverlayStore((state) => state.setIsPlaying);
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  const toggleMusic = () => {
+    if (!audioRef.current) return;
+    if (audioRef.current.paused) {
+      audioRef.current.play().catch(console.error);
+      setIsPlaying(true);
+    } else {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    }
+  };
+
+  const playMusic = () => {
+    if (audioRef.current) {
+      audioRef.current.play().catch(console.error);
+      setIsPlaying(true);
+    }
+  };
 
   return (
-    <navContext.Provider value={{ goToPage }}>
+    <navContext.Provider value={{ goToPage, playMusic, toggleMusic }}>
+      <audio
+        src={bgMusic}
+        loop
+        ref={(el) => {
+          audioRef.current = el;
+          if (el) el.volume = 0.2;
+        }}
+      />
+      <SoundToggle toggleMusic={toggleMusic} />
       <DoorTransition
         phase={doorPhase}
         onClosed={handleDoorsClosed}
@@ -83,13 +123,17 @@ export default function App() {
       />
       <h1 style={{ display: "none" }}>Spectrum Week 2026 | GDG VIT Mumbai</h1>
 
-      {currentPage === "home" && <Homepage goToPage={goToPage} />}
-      {currentPage === "events" && <Events />}
-      {currentPage === "events/heavenly-strike" && <HeavenlyStrike />}
-      {currentPage === "events/ai-agents" && <AiAgents />}
-      {currentPage === "events/way-of-ghost" && <WayOfGhost />}
-      {currentPage === "events/invasion" && <Invasion />}
-      {currentPage === "about" && <AboutUs />}
+      <Suspense fallback={null}>
+        {currentPage === "home" && <Homepage goToPage={goToPage} />}
+        {currentPage === "events" && <Events />}
+        {currentPage === "events/heavenly-strike" && <HeavenlyStrike />}
+        {currentPage === "events/ai-agents" && <AiAgents />}
+        {currentPage === "events/way-of-ghost" && <WayOfGhost />}
+        {currentPage === "events/invasion" && <Invasion />}
+        {currentPage === "about" && <AboutUs />}
+      </Suspense>
+      <Analytics />
+      <SpeedInsights />
     </navContext.Provider>
   );
 }

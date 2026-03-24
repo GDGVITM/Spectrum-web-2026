@@ -2,14 +2,15 @@ import DrawingPreloader from "./pages/components/drawingPreloader/DrawingPreload
 import useOverlayStore from "./utils/store";
 import LandingRevamp from "./pages/landingRevamp/LandingRevamp";
 import BreadCrumb from "./pages/components/breadCrumb/BreadCrumb";
-import bgMusic from "/sounds/bg-music2.mp3";
-import { useRef } from "react";
+import { useContext } from "react";
+import { navContext } from "./App";
 
 export default function Homepage({
   goToPage,
 }: {
   goToPage: (path: string) => void;
 }) {
+  const { playMusic } = useContext(navContext);
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -23,45 +24,23 @@ export default function Homepage({
     ],
   };
   const removeGif = useOverlayStore((state) => state.removeGif);
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const toggleMusic = () => {
-    if (!audioRef.current) return;
 
-    if (audioRef.current.paused) {
-      audioRef.current.play();
-    } else {
-      audioRef.current.pause();
-    }
-  };
-  const playMusic = () => {
-    if (audioRef.current) {
-      audioRef.current.play();
-    }
-  };
   return (
     <div>
       <BreadCrumb data={breadcrumbJsonLd} />
+      {!removeGif && (
+        <div style={{ zIndex: 1000, position: "relative" }}>
+          <DrawingPreloader onEnter={() => playMusic?.()} />
+        </div>
+      )}
       <div
-        style={
-          removeGif ? { display: "none" } : { zIndex: 50, position: "relative" }
-        }
-      >
-        <DrawingPreloader onEnter={playMusic} />
-      </div>
-      <audio
-        src={bgMusic}
-        loop
-        ref={(el) => {
-          audioRef.current = el;
-          if (el) el.volume = 0.2;
+        style={{
+          zIndex: 100,
+          position: "relative",
+          pointerEvents: "auto",
         }}
-      />
-      <div style={{ zIndex: 100, position: "relative" }}>
-        <LandingRevamp
-          goToPage={goToPage}
-          onToggle={toggleMusic}
-          audioRef={audioRef}
-        />
+      >
+        <LandingRevamp goToPage={goToPage} />
       </div>
     </div>
   );

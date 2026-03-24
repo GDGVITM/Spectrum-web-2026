@@ -26,12 +26,19 @@ export default function mainHam({
 
         element.style.setProperty(
           "mask-image",
-          `url("/videos/dragon-reveal.gif?${timestamp}")`
+          `url("/videos/dragon-reveal.webp?${timestamp}")`
         );
         element.style.setProperty(
           "-webkit-mask-image",
-          `url("/videos/dragon-reveal.gif?${timestamp}")`
+          `url("/videos/dragon-reveal.webp?${timestamp}")`
         );
+
+        // Remove mask after 1.8s to catch the end of the video before it loops
+        const timer = setTimeout(() => {
+          element.style.setProperty("mask-image", "none");
+          element.style.setProperty("-webkit-mask-image", "none");
+        }, 1800);
+        return () => clearTimeout(timer);
       } else {
         dragonRef.current.classList.remove(styles.hamOpen);
         dragonRef.current.style.removeProperty("mask-image");
@@ -50,7 +57,7 @@ export default function mainHam({
       url: "/events",
     },
     {
-      title: "HEAVENLY STRIKE",
+      title: "The Last Standing Ronin",
       cloud: hamCloud,
       classNameDiv: styles.sponsDiv,
       classNameText: styles.sponsText,
@@ -267,7 +274,7 @@ export default function mainHam({
                 window.open(item.url, "_blank");
               } else {
                 goToPage(item.url);
-                // setMainHamOpen(false);
+                setMainHamOpen(false);
               }
             }}
           >

@@ -1,738 +1,652 @@
+import { useEffect, useRef, useState, useCallback, lazy, Suspense } from "react";
+import styles from "./LandingRevamp.module.scss";
+import { useMainHamStore } from "../../utils/store";
+import useOverlayStore from "../../utils/store";
+import Lenis from "lenis";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { useEffect, useRef, useState } from "react";
 
-import useOverlayStore from "../../utils/store";
-import styles from "./LandingRevamp.module.scss";
-
-import { useGSAP } from "@gsap/react";
-import Navbar from "../components/navbar/Navbar";
-import landingImage from "/images/landing/background1.png";
-import mobileMountains from "/images/landing/mobileMountains.png";
-import tree from "/images/landing/tree1.png";
-import treeMob from "/images/landing/treeMob.png";
-import insta from "/svgs/landing/insta.svg";
-import instaLamp from "/svgs/landing/instaLamp.svg";
-import linkden from "/svgs/landing/linkden.svg";
-import linkdenLamp from "/svgs/landing/linkdenLamp.svg";
-import mobileBackground from "/svgs/landing/mobileBackground.svg";
-import mobileRegisterBtn from "/svgs/landing/mobileRegisterBtn.svg";
-import registerBtn from "/svgs/landing/registerBtn.svg";
-import eventsBtn from "/svgs/landing/mobileEventsBtn.svg";
-import wire from "/svgs/landing/wire.svg";
-import x from "/svgs/landing/x.svg";
-import xLamp from "/svgs/landing/xLamp.svg";
-import logo from "/images/branding/gdg-spectrum-logo.png";
-import profileBanner from "/images/branding/gdg-spectrum-banner.png";
-import mobileCloud from "/images/landing/mobileCloud.png";
-import AboutUs from "../aboutus/AboutUs";
-import MainHam from "../components/mainHam/mainHam";
-import Lenis from "@studio-freight/lenis";
-
-import { useMainHamStore } from "../../utils/store";
-import ScrollLabel from "./components/ScrollLabel";
+const Navbar = lazy(() => import("../components/navbar/Navbar"));
+const MainHam = lazy(() => import("../components/mainHam/mainHam"));
+const AboutUs = lazy(() => import("../aboutus/AboutUs"));
 
 gsap.registerPlugin(ScrollTrigger);
 
+// ─── Sprite sheet configuration ───────────────────────────────────────────────
+const TOTAL_FRAMES = 240;
+const SPRITE_COUNT = 12;
+const FRAMES_PER_SPRITE = 20;
+const GRID_COLS = 4;
+
+const DESKTOP_W = 1024;
+const DESKTOP_H = 576;
+const MOBILE_W = 540;
+const MOBILE_H = 960;
+
+const getSpritePath = (i: number, isMobile: boolean) =>
+  isMobile
+    ? `/images/New_images_gdg/mobile_sheets/sprite_${i}.webp`
+    : `/images/New_images_gdg/sprite_${i}.webp`;
+
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
 const TARGET_DATE = new Date("2026-04-01T00:00:00+05:30");
 
-const socialLinks = [
-  {
-    icon: x,
-    lamp: xLamp,
-    classNameDiv: styles.xDiv,
-    classNameLamp: styles.xLamp,
-    classNameIcon: styles.xIcon,
-    url: "https://x.com/gdgvitmumbai",
-  },
-  {
-    icon: linkden,
-    lamp: linkdenLamp,
-    classNameDiv: styles.linkdenDiv,
-    classNameLamp: styles.linkdenLamp,
-    classNameIcon: styles.linkdenIcon,
-    url: "https://www.linkedin.com/company/gdgvitmumbai/",
-  },
-  {
-    icon: insta,
-    lamp: instaLamp,
-    classNameDiv: styles.instaDiv,
-    classNameLamp: styles.instaLamp,
-    classNameIcon: styles.instaIcon,
-    url: "https://www.instagram.com/gdg.vitm/",
-  },
-];
+// ─── Module-level cache & lock ──────────────────────────────────────────────
+let globalLoadPromise: Promise<void> | null = null;
 
 export default function LandingRevamp({
   goToPage,
-  onToggle,
-  audioRef,
 }: {
   goToPage: (path: string) => void;
-  onToggle: () => void;
-  audioRef: React.RefObject<HTMLAudioElement | null>;
 }) {
-  const [styleTag, setstyleTag] = useState([
-    audioRef.current?.paused ? styles.soundLine2 : styles.soundLine,
-    audioRef.current?.paused ? styles.soundCross2 : styles.soundCross,
-  ]);
-  const overlayIsActive = useOverlayStore((state) => state.isActive);
-  const removeGif = useOverlayStore((state) => state.removeGif);
-  const setRemoveGif = useOverlayStore((state) => state.setRemoveGif);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const scrollSectionRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const bitmapsRef = useRef<ImageBitmap[][]>([]);
+  const currentFrameRef = useRef(0);
+  const targetFrameRef = useRef(0);
+  const rafIdRef = useRef<number>(0);
+  const isReadyRef = useRef(false);
+  const isMobileRef = useRef(false);
+  const lenisRef = useRef<Lenis | null>(null);
+
+  // Refs for GSAP scroll-triggered fade-outs
   const registerButtonRef = useRef<HTMLDivElement>(null);
   const dateCountdownRef = useRef<HTMLDivElement>(null);
-  const eventsButtonRef = useRef<HTMLDivElement>(null);
-  const landingRef = useRef<HTMLImageElement>(null);
-  const landingMobileRef = useRef<HTMLImageElement>(null);
-  const treeContainerRef = useRef<HTMLDivElement>(null);
-  // const isHamOpen = useHamStore((state) => state.isHamOpen);
-  const isMainHamOpen = useMainHamStore((state) => state.isMainHamOpen);
-  // const setIsHamOpen = useHamStore((state) => state.setHamOpen);
-  const setIsMainHamOpen = useMainHamStore((state) => state.setMainHamOpen);
+  const socialLinksRef = useRef<HTMLDivElement>(null);
+  const logoContainerRef = useRef<HTMLDivElement>(null);
 
-  const treeImageRef = useRef<HTMLImageElement>(null);
-  const scrollerRef = useRef<HTMLImageElement>(null);
+  const [allLoaded, setAllLoaded] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0 });
 
-  const aboutUsContRef = useRef<HTMLDivElement>(null);
-  const aboutUsWrapperRef = useRef<HTMLDivElement>(null);
+  const isMainHamOpen = useMainHamStore((s) => s.isMainHamOpen);
+  const setIsMainHamOpen = useMainHamStore((s) => s.setMainHamOpen);
 
-  const [scrollHeight, setScrollHeight] = useState(
-    (scrollerRef.current?.scrollHeight ?? 0) - window.innerHeight * 1.4
-  );
+  const bitMapCache = useOverlayStore((s) => s.bitMapCache);
+  const cacheType = useOverlayStore((s) => s.cacheType);
+  const setLandingReady = useOverlayStore((s) => s.setLandingReady);
+  const setSpritesLoaded = useOverlayStore((s) => s.setSpritesLoaded);
+  const overlayIsActive = useOverlayStore((s) => s.isActive);
+  const removeGif = useOverlayStore((s) => s.removeGif);
+  const setRemoveGif = useOverlayStore((s) => s.setRemoveGif);
+  const resetRemoveGif = useOverlayStore((s) => s.resetRemoveGif);
+
+  const isReturningRef = useRef(false);
+
   useEffect(() => {
-    if (removeGif) {
-      setScrollHeight(
-        (scrollerRef.current?.scrollHeight ?? 0) - window.innerHeight * 1.4
-      );
+    const hasSeenIntro = sessionStorage.getItem("introPlayed") === "true";
+    if (hasSeenIntro) {
+      isReturningRef.current = true;
+    } else {
+      resetRemoveGif();
     }
-    const handleResize = () => {
-      if (scrollerRef.current) {
-        setScrollHeight(
-          (scrollerRef.current.scrollHeight ?? 0) - window.innerHeight * 1.4
-        );
-      }
-      // if (window.innerWidth <= 730) {
-      //   document.scrollingElement?.scrollTo({ top: 0, behavior: "instant" });
-      //   document.body.style.position = "fixed";
-      // } else {
-      //   document.body.style.position = "static";
-      // }
-    };
+  }, [resetRemoveGif]);
 
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
-  }, [removeGif]);
-
+  // ─── Countdown timer ────────────────────────────────────────────────────────
   useEffect(() => {
-    setstyleTag([
-      audioRef.current?.paused ? styles.soundLine2 : styles.soundLine,
-      audioRef.current?.paused ? styles.soundCross2 : styles.soundCross,
-    ]);
-  }, [audioRef.current?.paused]);
-
-  useEffect(() => {
-    if (overlayIsActive) {
-      setTimeout(() => {
-        setRemoveGif();
-      }, 3000);
-    }
-  }, [overlayIsActive]);
-
-  useEffect(() => {
-    if (removeGif && wrapperRef.current) {
-      wrapperRef.current.style.maskImage = "none";
-      // Use CSS class instead of position changes
-      document.body.classList.remove("scroll-locked");
-    }
-    if (!removeGif) {
-      // Lock scroll with CSS class during overlay
-      document.body.classList.add("scroll-locked");
-    }
-  }, [removeGif]);
-
-  const [timeLeft, setTimeLeft] = useState({
-    days: 0,
-    hours: 0,
-    minutes: 0,
-    seconds: 0,
-  });
-
-  useEffect(() => {
-    const calculateTimeLeft = () => {
+    const update = () => {
       const now = new Date();
-      const difference = TARGET_DATE.getTime() - now.getTime();
-
-      if (difference <= 0) {
-        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+      const diff = TARGET_DATE.getTime() - now.getTime();
+      if (diff <= 0) {
+        setCountdown({ days: 0, hours: 0, minutes: 0 });
         return;
       }
-
-      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
-      const hours = Math.floor(
-        (difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
-      );
-      const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((difference % (1000 * 60)) / 1000);
-
-      setTimeLeft({ days, hours, minutes, seconds });
+      setCountdown({
+        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
+        minutes: Math.floor((diff / (1000 * 60)) % 60),
+      });
     };
-
-    document.scrollingElement?.scrollTo({ top: 0 });
-
-    calculateTimeLeft();
-    const timerId = setInterval(calculateTimeLeft, 1000);
-
-    return () => clearInterval(timerId);
+    update();
+    const id = setInterval(update, 60000);
+    return () => clearInterval(id);
   }, []);
 
-  useEffect(() => {
-    const lenis = new Lenis({
-      smoothWheel: true,
-      // wrapper: document.body,
-      // content: document.body,
-      lerp: window.innerWidth < 730 ? 0.1 : 0.1, // higher lerp for mobile for smoother scroll
-      infinite: false,
-    });
+  // ─── Draw frame ──────────────────────────────────────────────────────────────
+  const drawFrame = (frameIndex: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas || !isReadyRef.current) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
-    lenis.on("scroll", ScrollTrigger.update);
+    const fi = Math.round(Math.max(0, Math.min(TOTAL_FRAMES - 1, frameIndex)));
+    const spriteIdx = Math.floor(fi / FRAMES_PER_SPRITE);
+    const frameInSprite = fi % FRAMES_PER_SPRITE;
 
-    // Use GSAP ticker for better sync with ScrollTrigger
-    gsap.ticker.add((time) => {
-      lenis.raf(time * 1000);
-    });
+    const bitmaps = bitmapsRef.current[spriteIdx];
+    if (!bitmaps) return;
+    const bitmap = bitmaps[frameInSprite];
+    if (!bitmap) return;
 
-    // const breakPointDetector = gsap.to("#aboutUsBottom", {
-    //   scrollTrigger: {
-    //     trigger: "#aboutUsBottom",
-    //     start: "top bottom",
-    //     // onEnter: () => {lenis.stop(), console.log("Here")},
-    //   }
-    // })
+    const isMobile = isMobileRef.current;
+    const fw = isMobile ? MOBILE_W : DESKTOP_W;
+    const fh = isMobile ? MOBILE_H : DESKTOP_H;
 
-    return () => {
-      // breakPointDetector.kill()
-      gsap.ticker.remove((time) => {
-        lenis.raf(time);
-      });
-      lenis.destroy();
-    };
-  }, []);
+    const cw = canvas.width;
+    const ch = canvas.height;
 
-  useGSAP(() => {
-    if (treeImageRef.current && landingRef.current) {
-      gsap.set(treeImageRef.current, {
-        // autoAlpha: 1,
-        // scale: 1,
-        // y: 0,
-        force3D: true,
-      });
+    const coverScale = Math.max(cw / fw, ch / fh);
+    const containScale = Math.min(cw / fw, ch / fh);
 
-      gsap.set(landingRef.current, {
-        // autoAlpha: 1,
-        // scale: 1,
-        // y: 0,
-        force3D: true,
-      });
+    // Smoothly transition from cover to contain in the last frames (sprite sheet 12)
+    let scale = coverScale;
+    const transitionStart = 180;
+    const transitionEnd = 210;
 
-      gsap.set(scrollerRef.current, {
-        // autoAlpha: 1,
-        // scale: 1,
-        // y: 0,
-        force3D: true,
-      });
+    if (fi > transitionStart) {
+      const t = Math.min(1, (fi - transitionStart) / (transitionEnd - transitionStart));
+      scale = lerp(coverScale, containScale, t);
     }
 
-    gsap.fromTo(
-      registerButtonRef.current,
-      { autoAlpha: 1 },
-      {
-        autoAlpha: 0,
-        ease: "power2.inOut",
-        scrollTrigger: {
-          trigger: wrapperRef.current,
-          start: "50vh",
-          end: "+=145vh",
-          scrub: true,
-        },
+    const dx = (cw - fw * scale) / 2;
+    const dy = (ch - fh * scale) / 2;
+
+    ctx.clearRect(0, 0, cw, ch);
+    ctx.drawImage(bitmap, dx, dy, fw * scale, fh * scale);
+  };
+
+  // ─── Scroll handler ─────────────────────────────────────────────────────────
+  const handleScroll = useCallback(() => {
+    const section = scrollSectionRef.current;
+    if (!section) return;
+    const scrollTop = window.scrollY;
+    const maxScroll = section.offsetHeight - window.innerHeight;
+    const fraction =
+      maxScroll > 0 ? Math.min(1, Math.max(0, scrollTop / maxScroll)) : 0;
+    const animationFraction = Math.min(1, fraction / 0.9);
+    targetFrameRef.current = animationFraction * (TOTAL_FRAMES - 1);
+
+    if (fraction > 0.92) {
+      if (!isMainHamOpen) {
+        setIsMainHamOpen(true);
+        sessionStorage.setItem("introPlayed", "true");
       }
-    );
+    } else if (fraction < 0.85) {
+      if (isMainHamOpen) setIsMainHamOpen(false);
+    }
+    setIsScrolled(fraction > 0.05 && fraction < 0.95);
+  }, [isMainHamOpen, setIsMainHamOpen]);
 
-    gsap.fromTo(
-      eventsButtonRef.current,
-      { autoAlpha: 1 },
-      {
-        autoAlpha: 0,
-        ease: "power2.inOut",
-        scrollTrigger: {
-          trigger: wrapperRef.current,
-          start: "50vh",
-          end: "+=145vh",
-          scrub: true,
-        },
+  // ─── Preload all sprites (Robust Singleton) ─────────────────────────────────
+  useEffect(() => {
+    const isMobile = window.innerWidth < 768;
+    const currentType = isMobile ? "mobile" : "desktop";
+
+    if (globalLoadPromise && cacheType && cacheType !== currentType) {
+      globalLoadPromise = null;
+      isReadyRef.current = false;
+    }
+
+    if (isReadyRef.current && cacheType === currentType) return;
+
+    if (
+      bitMapCache &&
+      bitMapCache.length === SPRITE_COUNT &&
+      cacheType === currentType
+    ) {
+      bitmapsRef.current = bitMapCache;
+      isReadyRef.current = true;
+      setAllLoaded(true);
+      setLandingReady(true);
+      setSpritesLoaded(SPRITE_COUNT);
+      setTimeout(() => {
+        ScrollTrigger.refresh();
+        handleScroll();
+        drawFrame(targetFrameRef.current);
+      }, 50);
+      return;
+    }
+
+    if (!globalLoadPromise) {
+      globalLoadPromise = (async () => {
+        try {
+          isMobileRef.current = isMobile;
+          const fw = isMobile ? MOBILE_W : DESKTOP_W;
+          const fh = isMobile ? MOBILE_H : DESKTOP_H;
+
+          const blobs = await Promise.all(
+            Array.from({ length: SPRITE_COUNT }, (_, i) =>
+              fetch(getSpritePath(i + 1, isMobile), {
+                cache: "force-cache",
+              }).then((r) =>
+                r.ok ? r.blob() : Promise.reject(`HTTP ${r.status}`)
+              )
+            )
+          );
+
+          const newBitmaps: ImageBitmap[][] = [];
+          for (let si = 0; si < SPRITE_COUNT; si++) {
+            const sheetBitmap = await createImageBitmap(blobs[si]);
+            const frames: ImageBitmap[] = [];
+            for (let fi = 0; fi < FRAMES_PER_SPRITE; fi++) {
+              const col = fi % GRID_COLS;
+              const row = Math.floor(fi / GRID_COLS);
+              const bm = await createImageBitmap(
+                sheetBitmap,
+                col * fw,
+                row * fh,
+                fw,
+                fh,
+                { colorSpaceConversion: "none" }
+              );
+              frames.push(bm);
+            }
+            sheetBitmap.close();
+            newBitmaps[si] = frames;
+            useOverlayStore.getState().setSpritesLoaded(si + 1);
+          }
+
+          useOverlayStore.getState().setBitMapCache(newBitmaps, currentType);
+          useOverlayStore.getState().setLandingReady(true);
+        } catch (err) {
+          console.error("LandingRevamp: global load error", err);
+          globalLoadPromise = null;
+        }
+      })();
+    }
+
+    let cancelled = false;
+    globalLoadPromise.then(() => {
+      if (cancelled) return;
+      const latest = useOverlayStore.getState().bitMapCache;
+      if (latest && latest.length === SPRITE_COUNT) {
+        bitmapsRef.current = latest;
+        isReadyRef.current = true;
+        setAllLoaded(true);
+        setTimeout(() => {
+          ScrollTrigger.refresh();
+          drawFrame(targetFrameRef.current);
+          handleScroll();
+        }, 100);
       }
-    );
+    });
 
-    const mm = gsap.matchMedia();
+    return () => {
+      cancelled = true;
+    };
+  }, [bitMapCache, setAllLoaded, setLandingReady, setSpritesLoaded, handleScroll]);
 
-    mm.add("(max-width: 730px) or (aspect-ratio < 8/12)", () => {
-      // const masterTimeline = gsap.timeline({
-      //   scrollTrigger: {
-      //     trigger: wrapperRef.current,
-      //     start: "top top",
-      //     end: `+=300vh`,
-      //     scrub: true,
-      //     invalidateOnRefresh: true,
-      //   },
-      // });
-      gsap.fromTo(
-        dateCountdownRef.current,
+  // ─── Animation loop (lerp 0.15 for smoother feel) ──────────────────────────
+  useEffect(() => {
+    let lastDrawnFrame = -1;
+    const tick = () => {
+      rafIdRef.current = requestAnimationFrame(tick);
+      if (!isReadyRef.current) return;
+      currentFrameRef.current = lerp(
+        currentFrameRef.current,
+        targetFrameRef.current,
+        0.15
+      );
+      const rounded = Math.round(currentFrameRef.current);
+      if (rounded !== lastDrawnFrame) {
+        lastDrawnFrame = rounded;
+        drawFrame(rounded);
+      }
+    };
+    rafIdRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafIdRef.current);
+  }, []);
+
+  // ─── Canvas resize (DPR capped at 2) ──────────────────────────────────────
+  useEffect(() => {
+    const handleResize = () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+      drawFrame(Math.round(currentFrameRef.current));
+    };
+    window.addEventListener("resize", handleResize);
+    handleResize();
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // ─── Lenis smooth scroll ──────────────────────────────────────────────────
+  useEffect(() => {
+    lenisRef.current = new Lenis({
+      duration: 1.8,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      smoothWheel: true,
+      wheelMultiplier: 1.5,
+    });
+    const raf = (time: number) => {
+      lenisRef.current?.raf(time);
+      requestAnimationFrame(raf);
+    };
+    requestAnimationFrame(raf);
+
+    lenisRef.current.on("scroll", ScrollTrigger.update);
+
+    return () => lenisRef.current?.destroy();
+  }, []);
+
+  // ─── Scroll listener ─────────────────────────────────────────────────────
+  useEffect(() => {
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [handleScroll]);
+
+  // ─── Returning user: jump to scroll end ───────────────────────────────────
+  useEffect(() => {
+    if (isReturningRef.current && allLoaded) {
+      const section = scrollSectionRef.current;
+      if (section) {
+        const timer = setTimeout(() => {
+          const maxScroll = section.offsetHeight - window.innerHeight;
+          window.scrollTo(0, maxScroll);
+          if (lenisRef.current) lenisRef.current.scrollTo(maxScroll, { immediate: true });
+          requestAnimationFrame(() => {
+            targetFrameRef.current = TOTAL_FRAMES - 1;
+            currentFrameRef.current = TOTAL_FRAMES - 1;
+            setIsMainHamOpen(true);
+            handleScroll();
+            drawFrame(TOTAL_FRAMES - 1);
+            isReturningRef.current = false;
+          });
+        }, 120);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [allLoaded, setIsMainHamOpen, handleScroll]);
+
+  // ─── Auto-scroll on wheel (Cinematic jump to end) ──────────────────────────
+  useEffect(() => {
+    if (!allLoaded) return;
+    let isAnimating = false;
+    let animationTween: gsap.core.Tween | null = null;
+    let wheelAccumulator = 0;
+    const WHEEL_THRESHOLD = 10;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (!lenisRef.current) return;
+      const currentScroll = lenisRef.current.scroll || 0;
+      const maxScroll = scrollSectionRef.current
+        ? scrollSectionRef.current.offsetHeight - window.innerHeight
+        : 0;
+
+      wheelAccumulator += Math.abs(e.deltaY);
+
+      // If we haven't reached the bottom yet, trigger auto-scroll
+      if (currentScroll < maxScroll && wheelAccumulator > WHEEL_THRESHOLD) {
+        const targetScroll = e.deltaY > 0 ? maxScroll : 0;
+
+        // Don't restart if already very close
+        if (Math.abs(currentScroll - targetScroll) < 50) return;
+
+        // If user reverses direction, kill current animation
+        if (
+          animationTween &&
+          ((e.deltaY > 0 &&
+            (animationTween.vars as any).scroll < currentScroll) ||
+            (e.deltaY < 0 &&
+              (animationTween.vars as any).scroll > currentScroll))
+        ) {
+          animationTween.kill();
+          isAnimating = false;
+          wheelAccumulator = 0;
+        }
+
+        if (!isAnimating) {
+          isAnimating = true;
+          const proxy = { value: currentScroll };
+          animationTween = gsap.to(proxy, {
+            value: targetScroll,
+            duration: 9,
+            ease: "power1.inOut",
+            onUpdate: () => {
+              lenisRef.current?.scrollTo(proxy.value, { immediate: true });
+            },
+            onComplete: () => {
+              isAnimating = false;
+              animationTween = null;
+              wheelAccumulator = 0;
+            },
+          });
+        }
+      }
+      setTimeout(() => {
+        wheelAccumulator = 0;
+      }, 150);
+    };
+
+    window.addEventListener("wheel", handleWheel, { passive: true });
+    return () => {
+      window.removeEventListener("wheel", handleWheel);
+      animationTween?.kill();
+    };
+  }, [allLoaded]);
+
+  // ─── GSAP ScrollTrigger fade-outs (matching original) ─────────────────────
+  useEffect(() => {
+    if (!removeGif) return;
+
+    const anims: gsap.core.Tween[] = [];
+
+    const fadeOut = (
+      el: HTMLElement | null,
+      start: string,
+      end: string
+    ) => {
+      if (!el) return;
+      const anim = gsap.fromTo(
+        el,
         { autoAlpha: 1 },
         {
           autoAlpha: 0,
           ease: "power2.inOut",
           scrollTrigger: {
             trigger: wrapperRef.current,
-            start: "00vh",
-            end: "+=120vh",
+            start,
+            end,
             scrub: true,
-            invalidateOnRefresh: true,
           },
         }
       );
-
-      // masterTimeline
-
-      gsap.to(
-        treeImageRef.current,
-        {
-          scale: 1.15,
-          ease: "power2.inOut",
-          scrollTrigger: {
-            trigger: wrapperRef.current,
-            start: "top top",
-            end: `+=300vh`,
-            scrub: true,
-            invalidateOnRefresh: true,
-          },
-        }
-        // 0
-      );
-
-      gsap.to(
-        landingMobileRef.current,
-        {
-          scale: 1.08,
-          // y: "8%",
-          ease: "power2.inOut",
-          scrollTrigger: {
-            trigger: wrapperRef.current,
-            start: "top top",
-            end: `+=300vh`,
-            scrub: true,
-            invalidateOnRefresh: true,
-          },
-        }
-        // 0
-      );
-
-      gsap.to(landingMobileRef.current, {
-        y: "-10%",
-        // duration: 20,
-        ease: "sine.inOut",
-        scrollTrigger: {
-          trigger: wrapperRef.current,
-          start: "top top",
-          end: `+=300vh`,
-          scrub: true,
-          invalidateOnRefresh: true,
-        },
-      });
-    });
-    mm.add("(min-width: 730px) and (aspect-ratio > 8/12)", () => {
-      const masterTimeline = gsap.timeline({
-        scrollTrigger: {
-          trigger: wrapperRef.current,
-          start: "top top",
-          end: `+=${scrollHeight}px`,
-          scrub: 1.5,
-          invalidateOnRefresh: true,
-        },
-      });
-      masterTimeline
-
-        .to(
-          treeImageRef.current,
-          {
-            scale: 1.2,
-            // y: "14%",
-            duration: 2,
-          },
-          0
-        )
-        .to(
-          landingRef.current,
-          {
-            scale: 1.1,
-            // y: "8%",
-            duration: 2,
-          },
-          0
-        )
-
-        .to(
-          scrollerRef.current,
-          {
-            y: "-20%",
-            duration: 16,
-            // ease: "sine.in",
-          },
-          1
-        )
-
-        .to(
-          landingRef.current,
-          {
-            y: "-30%",
-            duration: 12,
-            ease: "power1.in",
-          },
-          0.5
-        )
-
-        .to(
-          dateCountdownRef.current,
-          {
-            y: "-300%",
-            duration: 1,
-            ease: "sine.in",
-          },
-          0
-        );
-    });
-    return () => {
-      mm.revert();
+      anims.push(anim);
     };
-  }, [scrollHeight]);
 
-  // useGSAP(() => {
-  //   const scrollAnimationTimeline = gsap.timeline({
-  //     scrollTrigger: {
-  //       trigger: wrapperRef.current,
-  //       scrub: true,
-  //       start: "top top",
-  //       end: "+=800vh",
-  //       onEnter: (self) => console.log("ENTERED:", self.trigger),
-  //       onLeave: (self) => console.log("LEFT:", self.trigger),
-  //       onUpdate: (self) => {
-  //         console.log("ACTIVE:", self.trigger, "Progress:", self.progress);
-  //       },
-  //     },
-  //   });
+    const timer = setTimeout(() => {
+      fadeOut(registerButtonRef.current, "50vh", "+=145vh");
+      fadeOut(dateCountdownRef.current, "0vh", "+=200vh");
+      fadeOut(socialLinksRef.current, "50vh", "+=200vh");
+      fadeOut(logoContainerRef.current, "50vh", "+=200vh");
+      ScrollTrigger.refresh();
+    }, 200);
 
-  //   scrollAnimationTimeline
-  //     .to(
-  //       treeImageRef.current,
-  //       {
-  //         scale: 1.2,
-  //         y: "14%",
-  //         duration: 4,
-  //         ease: "power2.out",
-  //       },
-  //       0
-  //     )
-  //     .to(
-  //       landingRef.current,
-  //       {
-  //         scale: 1.1,
-  //         duration: 4,
-  //         ease: "power2.out",
-  //       },
-  //       0
-  //     );
-  // }, []);
+    return () => {
+      clearTimeout(timer);
+      anims.forEach((a) => {
+        a.scrollTrigger?.kill();
+        a.kill();
+      });
+    };
+  }, [removeGif]);
+
+  // ─── Body scroll lock during preloader ─────────────────────────────────────
+  useEffect(() => {
+    if (removeGif) {
+      document.body.classList.remove("scroll-locked");
+      document.scrollingElement?.scrollTo({ top: 0 });
+    } else {
+      document.body.classList.add("scroll-locked");
+    }
+    return () => document.body.classList.remove("scroll-locked");
+  }, [removeGif]);
+
+  // ─── Ink-spread mask transition (3s for full animation) ────────────────────
+  const transitionStartedRef = useRef(false);
+  useEffect(() => {
+    if (overlayIsActive && !transitionStartedRef.current && !removeGif) {
+      transitionStartedRef.current = true;
+      setTimeout(() => setRemoveGif(), 1500);
+    }
+  }, [overlayIsActive, removeGif, setRemoveGif]);
 
   return (
     <>
+      {/* Navbar outside masked wrapper so it's always clickable */}
+      <Suspense fallback={null}>
+        <Navbar />
+      </Suspense>
+
       <main
-        className={`${styles.wrapper} ${!removeGif ? styles.pointerNoneEvent : ""
-          } ${overlayIsActive ? styles.mask : ""}`}
+        className={`${styles.wrapper} ${
+          removeGif ? styles.revealed : ""
+        } ${!removeGif ? styles.pointerNoneEvent : ""} ${
+          overlayIsActive && !removeGif ? styles.mask : ""
+        }`}
         ref={wrapperRef}
       >
-        <Navbar />
 
-        <div className={styles.mobileEventsBtnContainer} ref={eventsButtonRef}>
-          <img
-            src={eventsBtn}
-            className={styles.mobileEventsBtn}
-            onClick={() => goToPage("/events")}
-            alt="Explore Events"
-          />
+      {/* ─── Social Links (LEFT side) ──────────────────────────────────── */}
+      <div className={styles.socialLinksOverlay} ref={socialLinksRef}>
+        {[
+          {
+            href: "https://x.com/gdgvitmumbai",
+            icon: "/svgs/landing/x.svg",
+            lamp: "/svgs/landing/xLamp.svg",
+            cls: styles.xDiv,
+            iconCls: styles.xIcon,
+          },
+          {
+            href: "https://www.instagram.com/gdg.vitm/",
+            icon: "/svgs/landing/insta.svg",
+            lamp: "/svgs/landing/instaLamp.svg",
+            cls: styles.instaDiv,
+            iconCls: styles.instaIcon,
+          },
+          {
+            href: "https://www.linkedin.com/company/gdgvitmumbai/",
+            icon: "/svgs/landing/linkden.svg",
+            lamp: "/svgs/landing/linkdenLamp.svg",
+            cls: styles.linkdenDiv,
+            iconCls: styles.linkdenIcon,
+          },
+        ].map((s) => (
+          <div className={`${styles.socialLinkItem} ${s.cls}`} key={s.href}>
+            <a href={s.href} target="_blank" rel="noopener noreferrer">
+              <img
+                src={s.icon}
+                alt=""
+                className={`${styles.socialIcon} ${s.iconCls}`}
+              />
+              <img src={s.lamp} alt="" className={styles.socialLamp} />
+            </a>
+          </div>
+        ))}
+      </div>
 
-          <div className={styles.mobileEventsBtnText}>Explore Events</div>
+      {/* ─── Logo container (RIGHT side, above register button) ────────── */}
+      <div className={styles.logoContainer} ref={logoContainerRef}>
+        <img
+          src="/images/branding/gdg-spectrum-banner.png"
+          className={styles.profileBanner}
+          alt="GDG Spectrum banner"
+        />
+        <img
+          src="/images/branding/gdg-spectrum-logo.webp"
+          className={styles.logo}
+          alt="GDG Logo for Spectrum"
+        />
+      </div>
+
+      {/* ─── Countdown Timer (RIGHT side, near sound toggle) ──────────── */}
+      <div className={styles.dateCountdown} ref={dateCountdownRef}>
+        <div className={`${styles.daysLeft} ${styles.timeLeft}`}>
+          <div className={styles.days}>
+            {countdown.days >= 10 ? (
+              <span>{countdown.days}</span>
+            ) : (
+              <span>0{countdown.days}</span>
+            )}
+          </div>
+          DAYS
         </div>
+        <div>:</div>
+        <div className={`${styles.hoursLeft} ${styles.timeLeft}`}>
+          <div className={styles.hours}>
+            {countdown.hours >= 10 ? (
+              <span>{countdown.hours}</span>
+            ) : (
+              <span>0{countdown.hours}</span>
+            )}
+          </div>
+          HOURS
+        </div>
+        <div>:</div>
+        <div className={`${styles.minutesLeft} ${styles.timeLeft}`}>
+          <div className={styles.minutes}>
+            {countdown.minutes >= 10 ? (
+              <span>{countdown.minutes}</span>
+            ) : (
+              <span>0{countdown.minutes}</span>
+            )}
+          </div>
+          MINS
+        </div>
+      </div>
 
+      {/* ─── Register / Explore Events button (fixed, bottom-right) ────── */}
+      <div
+        className={styles.registerBtnContainer}
+        onClick={() => goToPage("/events")}
+        ref={registerButtonRef}
+      >
+        <img
+          src="/svgs/landing/registerBtn.svg"
+          className={styles.registerBtn}
+          alt="Explore Events"
+        />
+        <img
+          src="/svgs/landing/mobileRegisterBtn.svg"
+          className={styles.mobileRegisterBtn}
+          alt="Explore Events"
+        />
+        <div className={styles.registerBtnText}>Explore Events</div>
+      </div>
+
+      {/* ─── Scroll Section (Canvas) ───────────────────────────────────── */}
+      <div className={styles.scrollSection} ref={scrollSectionRef}>
+        <div className={styles.canvasContainer}>
+          <canvas ref={canvasRef} className={`${styles.mainCanvas} ${allLoaded ? styles.visible : ""}`} />
+        </div>
+      </div>
+
+      {/* ─── Main Menu (revealed at scroll end) ────────────────────────── */}
+      <div
+        className={`${styles.menuSection} ${
+          isMainHamOpen ? styles.revealed : ""
+        }`}
+      >
+        <Suspense fallback={null}>
+          <MainHam goToPage={goToPage} />
+        </Suspense>
+      </div>
+
+      {/* ─── Scroll Indicator ──────────────────────────────────────────── */}
+      <div className={styles.contentOverlay}>
         <div
-          className={
-            isMainHamOpen
-              ? `${styles.mainHamContainer} ${styles.mainHamOpen}`
-              : styles.mainHamContainer
-          }
+          className={`${styles.scrollIndicator} ${
+            isScrolled || !removeGif ? styles.hidden : ""
+          }`}
         >
-          <div onClick={() => setIsMainHamOpen(false)}></div>
-          <div className={styles.showMainHam}>
-            <MainHam goToPage={goToPage} />
+          <div className={styles.mouse}>
+            <div className={styles.wheel}></div>
           </div>
+          <span className={styles.scrollText}>Scroll Down</span>
         </div>
-        <div className={styles.backgroundContainer}>
-          <div className={styles.logoContainer}>
-            <img src={profileBanner} className={styles.profileBanner} alt="GDG Spectrum banner" />
-            <img src={logo} className={styles.logo} alt="GDG Logo for Spectrum" />
-          </div>
+      </div>
 
-          <div className={styles.desktopBackground} ref={landingRef}>
-            <img
-              src={landingImage}
-              className={styles.landingImage}
-              alt="Landing Image"
-            />
-          </div>
-
-          <div
-            className={styles.mobileBackgroundContainer}
-            ref={landingMobileRef}
-          >
-            <img
-              src={mobileMountains}
-              className={styles.mobileMountains}
-              alt="Mountains"
-            // ref={landingMobileRef}
-            />
-            <img
-              src={mobileBackground}
-              alt="mobile"
-              className={styles.mobileBackground}
-            />
-
-            <img src={mobileCloud} className={styles.mobileCloud} alt="cloud" />
-          </div>
-        </div>
-        <div className={styles.dateCountdown} ref={dateCountdownRef}>
-          <div className={`${styles.daysLeft} ${styles.timeLeft}`}>
-            <div className={styles.days}>
-              {timeLeft.days >= 10 ? (
-                <span>{timeLeft.days}</span>
-              ) : (
-                <span>0{timeLeft.days}</span>
-              )}
-            </div>
-            DAYS
-          </div>
-          <div>:</div>
-          <div className={`${styles.hoursLeft} ${styles.timeLeft}`}>
-            <div className={styles.hours}>
-              {timeLeft.hours >= 10 ? (
-                <span>{timeLeft.hours}</span>
-              ) : (
-                <span>0{timeLeft.hours}</span>
-              )}
-            </div>
-            HOURS
-          </div>
-          <div>:</div>
-          <div className={`${styles.minutesLeft} ${styles.timeLeft}`}>
-            <div className={styles.minutes}>
-              {timeLeft.minutes >= 10 ? (
-                <span>{timeLeft.minutes}</span>
-              ) : (
-                <span>0{timeLeft.minutes}</span>
-              )}
-            </div>
-            MINUTES
-          </div>
-        </div>
-        <ScrollLabel />
-        <div
-          className={styles.sounds}
-          onClick={() => {
-            if (styleTag[0] === styles.soundLine2)
-              setstyleTag([styles.soundLine, styles.soundCross]);
-            else setstyleTag([styles.soundLine2, styles.soundCross2]);
-            onToggle();
-          }}
-        >
-          <span className={styleTag[0]}></span>
-          <span className={styleTag[0]}></span>
-          <span className={styleTag[0]}></span>
-          <span className={styleTag[0]}></span>
-          <span className={styleTag[0]}></span>
-          <span className={styleTag[1]}></span>
-        </div>
-        <div className={styles.scrollerWrapper}>
-          <div className={styles.scroller} ref={scrollerRef}>
-            <div className={styles.landingContainer}>
-              <div
-                className={styles.registerBtnContainer}
-                onClick={() => goToPage("/events")}
-                ref={registerButtonRef}
-              >
-                <img
-                  src={registerBtn}
-                  className={styles.registerBtn}
-                  alt="Explore Events"
-                />
-                <img
-                  src={mobileRegisterBtn}
-                  className={styles.mobileRegisterBtn}
-                  alt="Explore Events"
-                />
-                <div className={styles.registerBtnText}>Explore Events</div>
-              </div>
-
-              <div className={styles.foregroundContainer}>
-                <div className={styles.treeContainer} ref={treeContainerRef}>
-                  <div className={styles.tree} ref={treeImageRef}>
-                    <div className={styles.socialLinksContainer}>
-                      <div className={styles.wire}>
-                        <img src={wire} alt="Wire" />
-                      </div>
-                      {socialLinks.map((link, index) => (
-                        <div
-                          key={index}
-                          className={`${styles.socialLinkContainer} ${link.classNameDiv}`}
-                        >
-                          <a
-                            key={index}
-                            href={link.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={styles.socialLink}
-                          >
-                            <img
-                              src={link.icon}
-                              alt="Icon"
-                              className={`${styles.socialIcon} ${link.classNameIcon}`}
-                            />
-                            <img
-                              src={link.lamp}
-                              alt="Lamp"
-                              className={`${styles.socialLamp} ${link.classNameLamp}`}
-                            />
-                          </a>
-                        </div>
-                      ))}
-                    </div>
-                    <div className={styles.audioTagContainer}>
-                      <div className={styles.wire}>
-                        <img src={wire} alt="Wire" />
-                      </div>
-                      {/* <svg
-                        fill="#fff"
-                        version="1.1"
-                        id="Capa_1"
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="800px"
-                        height="800px"
-                        viewBox="0 0 345.09 345.089"
-                        className={styles.audioTag}
-                        onClick={onToggle}
-                      >
-                        <g>
-                          <path
-                            d="M172.539,0.003C77.405,0.003,0,77.405,0,172.544c0,95.141,77.405,172.542,172.539,172.542
-                            c95.137,0,172.551-77.401,172.551-172.542C345.084,77.405,267.676,0.003,172.539,0.003z M151.973,209.493
-                            c0,6.323-2.879,12.105-7.449,14.952c-4.566,2.876-10.064,2.348-14.201-1.388l-31.243-28.019c-1.414,0.648-2.996,1.045-4.668,1.045
-                            H68.254c-6.167,0-11.166-5.008-11.166-11.175v-26.166c0-6.173,4.999-11.16,11.166-11.16h26.157c2.072,0,3.996,0.604,5.65,1.58
-                            l30.261-27.16c2.372-2.12,5.188-3.2,8.022-3.2c2.104,0,4.23,0.606,6.179,1.819c4.57,2.882,7.449,8.656,7.449,14.964V209.493z
-                            M186.503,206.802c-2.456,0-4.918-0.942-6.791-2.816c-3.753-3.759-3.753-9.848,0-13.595c4.768-4.768,7.397-11.103,7.397-17.858
-                            c0-6.737-2.63-13.081-7.397-17.852c-3.753-3.753-3.753-9.839,0-13.589c3.753-3.759,9.842-3.759,13.595,0
-                            c8.395,8.398,13.03,19.57,13.03,31.441c0,11.89-4.636,23.059-13.03,31.453C191.421,205.86,188.971,206.802,186.503,206.802z
-                            M215.356,227.092c-2.456,0-4.924-0.937-6.792-2.81c-3.753-3.76-3.753-9.842,0-13.596c21.035-21.028,21.017-55.25-0.012-76.281
-                            c-3.753-3.75-3.753-9.839,0-13.589s9.842-3.756,13.595,0c28.529,28.531,28.529,74.942,0.006,103.466
-                            C220.28,226.156,217.818,227.092,215.356,227.092z M251.007,250.74c-1.88,1.873-4.342,2.81-6.792,2.81
-                            c-2.462,0-4.93-0.937-6.797-2.81c-3.759-3.76-3.759-9.836,0-13.596c17.252-17.258,26.745-40.189,26.745-64.6
-                            c0-24.403-9.5-47.351-26.77-64.602c-3.753-3.75-3.753-9.839,0-13.589c3.759-3.759,9.842-3.759,13.595,0
-                            c20.897,20.888,32.402,48.654,32.402,78.191C283.385,202.094,271.886,229.861,251.007,250.74z"
-                          />
-                        </g>
-                      </svg> */}
-                      {/* <svg
-                        width="667"
-                        height="601"
-                        viewBox="0 0 667 601"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                        className={styles.audioTag}
-                        onClick={onToggle}
-                      >
-                        <path
-                          d="M433.333 41.748C433.333 5.79397 390.85 -13.2804 363.983 10.609L214.265 143.718C209.688 147.787 203.778 150.034 197.654 150.034H75C33.5787 150.034 0 183.613 0 225.034V374.964C0 416.384 33.5787 449.964 75 449.964H197.652C203.776 449.964 209.688 452.211 214.264 456.281L363.98 589.404C390.85 613.298 433.333 594.224 433.333 558.268V41.748ZM247.487 181.085L383.333 60.3077V539.708L247.488 418.918C233.758 406.708 216.025 399.964 197.652 399.964H75C61.193 399.964 50 388.771 50 374.964V225.034C50 211.227 61.193 200.034 75 200.034H197.654C216.025 200.034 233.757 193.291 247.487 181.085ZM566.387 96.659C577.48 88.441 593.137 90.7737 601.357 101.869C642.39 157.271 666.667 225.878 666.667 300.081C666.667 374.284 642.39 442.891 601.357 498.294C593.137 509.391 577.48 511.724 566.387 503.504C555.29 495.288 552.96 479.631 561.177 468.534C596.05 421.451 616.667 363.211 616.667 300.081C616.667 236.954 596.05 178.714 561.177 131.628C552.96 120.533 555.29 104.877 566.387 96.659ZM504.767 179.059C516.907 172.486 532.08 177.001 538.653 189.143C556.527 222.163 566.667 259.974 566.667 300.081C566.667 340.188 556.527 378.001 538.653 411.021C532.08 423.161 516.907 427.678 504.767 421.104C492.623 414.531 488.107 399.358 494.68 387.218C508.697 361.324 516.667 331.671 516.667 300.081C516.667 268.491 508.697 238.838 494.68 212.946C488.107 200.804 492.623 185.632 504.767 179.059Z"
-                          fill="#413f43ff"
-                        />
-                      </svg> */}
-                      {/* <svg
-                        width="526"
-                        height="526"
-                        viewBox="0 0 526 526"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                        className={styles.audioTag}
-                        onClick={onToggle}
-                      >
-                        <path
-                          d="M215.333 148L163.333 200H121.199C97.9994 200 77.066 200.4 74.7993 200.8L70.666 201.6V270.133V338.667H116.933H163.199L215.599 390.933L267.999 443.333V269.6C267.999 174.133 267.866 96.0001 267.599 96.0001C267.466 96.0001 243.866 119.333 215.333 148Z"
-                          fill="#ffdfd0"
-                        />
-                        <path
-                          d="M400.132 120.534L394.399 126.267L402.932 136.134C414.399 149.467 417.732 154.134 426.132 168.4C449.732 208.4 458.532 260.8 449.466 307.6C442.666 342.8 425.066 378.667 402.666 403.067L394.266 412.267L400.532 418.4L406.799 424.667L415.866 415.067C437.732 392 455.866 358.267 464.666 324.667C480.799 262.534 469.466 198.534 433.066 145.067C425.466 134 408.799 114.667 406.799 114.667C406.266 114.667 403.332 117.334 400.132 120.534Z"
-                          fill="#ffdfd0"
-                        />
-                        <path
-                          d="M350.934 169.734C347.867 172.8 345.334 176 345.334 176.8C345.334 177.6 347.2 179.867 349.467 182.134C356.267 188.4 368.8 208.534 373.334 220.267C391.067 266 383.2 316 352.534 353.467L344.934 362.8L351.067 369.067L357.2 375.2L361.467 371.334C367.334 365.6 379.067 348.8 384.4 337.867C397.2 312.534 400.534 298.4 400.4 268.667C400.4 248.534 400 244.534 396.934 233.067C392.4 216.134 385.867 201.334 376.934 187.734C369.734 176.8 359.334 164 357.467 164C356.934 164 354 166.534 350.934 169.734Z"
-                          fill="#ffdfd0"
-                        />
-                        <path
-                          d="M301.467 219.2C298.533 222.267 296 225.2 296 225.6C296 226.133 298.4 230 301.333 234.267C308 243.733 312.533 257.733 312.533 269.333C312.667 280.533 308.133 295.067 302 303.467C295.067 313.2 295.067 312.933 301.6 319.6L307.733 325.6L311.467 321.467C316.4 316 324.267 302.267 327.2 293.867C330.8 284.133 331.6 261.6 328.8 250.8C325.467 237.867 313.467 216.267 308.533 214.133C307.733 213.867 304.533 216.133 301.467 219.2Z"
-                          fill="#ffdfd0"
-                        />
-                      </svg> */}
-                    </div>
-                    <img
-                      src={tree}
-                      // className={styles.tree}
-                      className={styles.treeDesktop}
-                      alt="Tree"
-                      loading="eager"
-                      fetchPriority="high"
-                      style={{ contain: "none" }}
-                    />
-                    <img
-                      src={treeMob}
-                      alt="TreeMobile"
-                      className={styles.treeMob}
-                      loading="eager"
-                      fetchPriority="high"
-                    />
-                  </div>
-                  <div className={styles.treeExtender}></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className={styles.bottomContainer}>
-          <div className={styles.bottomOverlay} />
-          <div className={styles.aboutUsContainer} ref={aboutUsContRef}>
-            <div className={styles.aboutUsWrapper} ref={aboutUsWrapperRef}>
-              <AboutUs isBackBtn={false} />
-              <div className={styles.aboutUsBottom} id="aboutUsBottom" />
-            </div>
-          </div>
-        </div>
-      </main>
+      {/* ─── About Us Section ──────────────────────────────────────────── */}
+      <div className={styles.bottomContainer}>
+        <Suspense fallback={null}>
+          <AboutUs isBackBtn={false} />
+        </Suspense>
+      </div>
+    </main>
     </>
   );
 }
