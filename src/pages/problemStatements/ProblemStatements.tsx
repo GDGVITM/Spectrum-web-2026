@@ -80,7 +80,7 @@ const DOMAINS: Domain[] = [
         objective:
           "To develop a platform that predicts and manages localized disasters using available or simulated data and community participation.",
         keyFeatures: [
-          "Real time disaster prediction using multiple data sources (or simulated inputs)",
+          "Real-time disaster prediction using multiple data sources (or simulated inputs)",
           "Geo-tagged community-based incident reporting system",
           "Alert and notification system for risk zones",
           "Visualization of affected areas on interactive maps",
